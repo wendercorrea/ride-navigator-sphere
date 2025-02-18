@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import type { Profile } from '@/types/database';
+import { User } from '@supabase/supabase-js';
 
 export function useAuth() {
-  const [user, setUser] = useState(supabase.auth.getUser());
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -85,20 +86,24 @@ export function useAuth() {
       });
       if (signUpError) throw signUpError;
 
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user?.id,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-      });
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            phone,
+          });
 
-      if (profileError) throw profileError;
+        if (profileError) throw profileError;
 
-      toast({
-        title: 'Success',
-        description: 'Account created successfully',
-      });
-      navigate('/');
+        toast({
+          title: 'Success',
+          description: 'Account created successfully',
+        });
+        navigate('/');
+      }
     } catch (error) {
       console.error('Error signing up:', error);
       toast({

@@ -27,7 +27,7 @@ export function useDriver() {
           id: user.id,
           ...driverData,
           status: 'offline',
-        });
+        } as Driver);
 
       if (error) throw error;
 
@@ -56,7 +56,7 @@ export function useDriver() {
         .update({
           current_latitude: latitude,
           current_longitude: longitude,
-        })
+        } as Partial<Driver>)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -71,7 +71,7 @@ export function useDriver() {
     try {
       const { error } = await supabase
         .from('drivers')
-        .update({ status })
+        .update({ status } as Partial<Driver>)
         .eq('id', user.id);
 
       if (error) throw error;

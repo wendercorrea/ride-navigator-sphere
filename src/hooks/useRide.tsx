@@ -34,7 +34,8 @@ export function useRide() {
         .insert({
           passenger_id: user.id,
           ...rideData,
-        });
+          status: 'pending',
+        } as Ride);
 
       if (error) throw error;
 
@@ -63,7 +64,7 @@ export function useRide() {
         .update({
           driver_id: user.id,
           status: 'accepted',
-        })
+        } as Partial<Ride>)
         .eq('id', rideId)
         .eq('status', 'pending');
 
@@ -90,7 +91,7 @@ export function useRide() {
         .update({
           status: 'in_progress',
           started_at: new Date().toISOString(),
-        })
+        } as Partial<Ride>)
         .eq('id', rideId)
         .eq('status', 'accepted');
 
@@ -118,7 +119,7 @@ export function useRide() {
           status: 'completed',
           completed_at: new Date().toISOString(),
           final_price: finalPrice,
-        })
+        } as Partial<Ride>)
         .eq('id', rideId)
         .eq('status', 'in_progress');
 
@@ -145,7 +146,7 @@ export function useRide() {
         .update({
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
-        })
+        } as Partial<Ride>)
         .eq('id', rideId)
         .or('status.eq.pending,status.eq.accepted');
 
