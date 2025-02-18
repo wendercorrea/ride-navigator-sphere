@@ -1,13 +1,64 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MapPin, Search } from "lucide-react";
+import { useRide } from "@/hooks/useRide";
+import { toast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
+  const { requestRide, loading } = useRide();
+
+  // Função para simular coordenadas baseadas no endereço (em produção, usar um serviço de geocoding)
+  const getCoordinates = useCallback((address: string) => {
+    // Simulando coordenadas para teste
+    const hash = Array.from(address).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return {
+      latitude: -23.55 + (hash % 10) / 100,
+      longitude: -46.63 + (hash % 10) / 100,
+    };
+  }, []);
+
+  const handleRequestRide = async () => {
+    if (!pickup || !destination) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha o endereço de origem e destino",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const pickupCoords = getCoordinates(pickup);
+    const destinationCoords = getCoordinates(destination);
+
+    // Simulando um preço estimado baseado na "distância"
+    const estimatedPrice = Math.abs(
+      (destinationCoords.latitude - pickupCoords.latitude) * 100 +
+      (destinationCoords.longitude - pickupCoords.longitude) * 100
+    );
+
+    try {
+      await requestRide({
+        pickup_latitude: pickupCoords.latitude,
+        pickup_longitude: pickupCoords.longitude,
+        destination_latitude: destinationCoords.latitude,
+        destination_longitude: destinationCoords.longitude,
+        pickup_address: pickup,
+        destination_address: destination,
+        estimated_price: estimatedPrice,
+      });
+
+      // Limpar os campos após solicitar a corrida
+      setPickup("");
+      setDestination("");
+    } catch (error) {
+      console.error("Error requesting ride:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-secondary to-background">
@@ -20,14 +71,14 @@ const Index = () => {
         {/* Hero Section */}
         <div className="text-center space-y-4 animate-fade-down">
           <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            Safe and Reliable Rides
+            Corridas Seguras e Confiáveis
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-            Your Journey, Our Priority
+            Sua Jornada, Nossa Prioridade
           </h1>
           <p className="text-lg text-muted-foreground max-w-[600px] mx-auto">
-            Experience seamless transportation with our premium ride-hailing service.
-            Book your ride in seconds.
+            Experimente um serviço de transporte premium com nossa plataforma de 
+            ride-hailing. Solicite sua corrida em segundos.
           </p>
         </div>
 
@@ -38,7 +89,7 @@ const Index = () => {
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Pickup location"
+                  placeholder="Local de partida"
                   className="pl-10"
                   value={pickup}
                   onChange={(e) => setPickup(e.target.value)}
@@ -47,16 +98,27 @@ const Index = () => {
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Where to?"
+                  placeholder="Para onde?"
                   className="pl-10"
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
                 />
               </div>
             </div>
-            <Button className="w-full" size="lg">
-              <Search className="mr-2 h-4 w-4" />
-              Find a Ride
+            <Button 
+              className="w-full" 
+              size="lg" 
+              onClick={handleRequestRide}
+              disabled={loading || !pickup || !destination}
+            >
+              {loading ? (
+                "Solicitando..."
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Solicitar Corrida
+                </>
+              )}
             </Button>
           </div>
         </Card>
@@ -65,16 +127,16 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mt-12 animate-slide-up-fade">
           {[
             {
-              title: "Real-time Tracking",
-              description: "Track your ride in real-time with live GPS updates",
+              title: "Rastreamento em Tempo Real",
+              description: "Acompanhe sua corrida em tempo real com atualizações GPS",
             },
             {
-              title: "Safe Rides",
-              description: "Verified drivers and safety features for peace of mind",
+              title: "Corridas Seguras",
+              description: "Motoristas verificados e recursos de segurança",
             },
             {
-              title: "24/7 Support",
-              description: "Round-the-clock customer support for assistance",
+              title: "Suporte 24/7",
+              description: "Atendimento ao cliente 24 horas para sua tranquilidade",
             },
           ].map((feature, index) => (
             <Card key={index} className="p-6 text-center glass-effect">
