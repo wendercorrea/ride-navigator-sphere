@@ -1,0 +1,135 @@
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/components/ui/use-toast';
+import type { Profile } from '@/types/database';
+
+export function useAuth() {
+  const [user, setUser] = useState(supabase.auth.getUser());
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
+
+  async function loadProfile() {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load profile',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function signIn(email: string, password: string) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing in:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function signUp(
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    phone: string
+  ) {
+    try {
+      const { error: signUpError, data } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (signUpError) throw signUpError;
+
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user?.id,
+        first_name: firstName,
+        last_name: lastName,
+        phone,
+      });
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: 'Success',
+        description: 'Account created successfully',
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing up:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function signOut() {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  return {
+    user,
+    profile,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+  };
+}
