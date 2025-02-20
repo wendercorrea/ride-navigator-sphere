@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { Button } from "./button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogIn } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,6 +24,10 @@ export function Navbar() {
             <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
               Contact
             </a>
+            <Link to="/auth" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
+              <LogIn className="h-4 w-4 mr-1" />
+              Login
+            </Link>
             <Button variant="default" size="sm">
               Get Started
             </Button>
@@ -67,6 +72,13 @@ export function Navbar() {
               >
                 Contact
               </a>
+              <Link
+                to="/auth"
+                className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-primary/10 transition-colors flex items-center"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+              </Link>
               <Button className="w-full mt-4">
                 Get Started
               </Button>
