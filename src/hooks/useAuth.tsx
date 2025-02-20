@@ -83,7 +83,7 @@ export function useAuth() {
       if (error) throw error;
       toast({
         title: 'Sucesso',
-        description: 'Instruções de reset de senha foram enviadas para seu email',
+        description: `As instruções de reset de senha foram enviadas para ${email}. Por favor, verifique sua caixa de entrada.`,
       });
     } catch (error) {
       console.error('Erro ao resetar senha:', error);
