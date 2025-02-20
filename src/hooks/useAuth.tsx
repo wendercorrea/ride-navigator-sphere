@@ -72,6 +72,26 @@ export function useAuth() {
     }
   }
 
+  async function resetPassword(email: string) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      if (error) throw error;
+      toast({
+        title: 'Sucesso',
+        description: 'Instruções de reset de senha foram enviadas para seu email',
+      });
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }
+
   async function signUp(
     email: string,
     password: string,
@@ -136,5 +156,6 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
+    resetPassword,
   };
 }

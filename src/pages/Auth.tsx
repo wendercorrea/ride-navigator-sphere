@@ -7,12 +7,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Auth = () => {
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp, resetPassword, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +23,20 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     await signUp(email, password, firstName, lastName, phone);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      return toast({
+        title: "Erro",
+        description: "Por favor, insira seu email",
+        variant: "destructive",
+      });
+    }
+    setIsResetting(true);
+    await resetPassword(email);
+    setIsResetting(false);
   };
 
   return (
@@ -51,6 +66,15 @@ const Auth = () => {
               />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
+              </Button>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full mt-2"
+                onClick={handleResetPassword}
+                disabled={isResetting}
+              >
+                {isResetting ? "Enviando..." : "Esqueceu sua senha?"}
               </Button>
             </form>
           </TabsContent>
