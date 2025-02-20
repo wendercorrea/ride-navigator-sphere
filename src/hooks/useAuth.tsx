@@ -6,6 +6,9 @@ import { toast } from '@/components/ui/use-toast';
 import type { Profile } from '@/types/database';
 import { User } from '@supabase/supabase-js';
 
+// Define a URL do site usando variável de ambiente ou fallback para preview URL
+const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://preview--ride-navigator-sphere.lovable.app';
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -75,7 +78,7 @@ export function useAuth() {
   async function resetPassword(email: string) {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${SITE_URL}/auth/reset-password`,
       });
       if (error) throw error;
       toast({
