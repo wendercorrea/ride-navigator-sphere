@@ -20,8 +20,8 @@ export function useRideRequest() {
   }) {
     if (!user) {
       toast({
-        title: 'Error',
-        description: 'You must be logged in to request a ride',
+        title: 'Erro',
+        description: 'Você precisa estar logado para solicitar uma corrida',
         variant: 'destructive',
       });
       return;
@@ -29,6 +29,18 @@ export function useRideRequest() {
 
     setLoading(true);
     try {
+      // Primeiro, verifica se o perfil do usuário existe
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Perfil de usuário não encontrado. Por favor, faça login novamente.');
+      }
+
+      // Se o perfil existe, cria a corrida
       const { error } = await supabase
         .from('rides')
         .insert({
@@ -40,13 +52,13 @@ export function useRideRequest() {
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Ride requested successfully',
+        title: 'Sucesso',
+        description: 'Corrida solicitada com sucesso',
       });
     } catch (error) {
-      console.error('Error requesting ride:', error);
+      console.error('Erro ao solicitar corrida:', error);
       toast({
-        title: 'Error',
+        title: 'Erro',
         description: error.message,
         variant: 'destructive',
       });
