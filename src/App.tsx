@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Rider from "./pages/Rider";
 
 const queryClient = new QueryClient();
 
@@ -23,9 +23,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
+  if (!user) {
+    return <Navigate to="/rider" replace />;
+  }
+
 
   return <>{children}</>;
 };
+
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

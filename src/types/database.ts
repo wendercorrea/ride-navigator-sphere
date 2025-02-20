@@ -1,4 +1,3 @@
-
 export type Profile = {
   id: string;
   first_name: string;
