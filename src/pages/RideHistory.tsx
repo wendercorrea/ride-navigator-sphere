@@ -47,7 +47,7 @@ export default function RideHistory() {
       const { data, error } = await query.order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data as RideWithProfiles[];
+      return (data || []) as unknown as RideWithProfiles[];
     },
     enabled: Boolean(user?.id),
   });

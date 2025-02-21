@@ -1,3 +1,4 @@
+
 export type Profile = {
   id: string;
   first_name: string;
@@ -51,3 +52,4 @@ export type Rating = {
   comment: string | null;
   created_at: string;
 };
+
