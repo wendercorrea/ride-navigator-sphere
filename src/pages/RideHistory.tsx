@@ -9,9 +9,20 @@ import { RideMap } from "@/components/RideMap";
 import type { Ride } from "@/types/database";
 import { format } from "date-fns";
 
+interface RideWithProfiles extends Ride {
+  passenger: {
+    first_name: string;
+    last_name: string;
+  };
+  driver: {
+    first_name: string;
+    last_name: string;
+  } | null;
+}
+
 export default function RideHistory() {
   const { user, profile } = useAuth();
-  const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+  const [selectedRide, setSelectedRide] = useState<RideWithProfiles | null>(null);
   const isDriver = profile?.id && Boolean(user);
 
   const { data: rides, isLoading } = useQuery({
@@ -36,7 +47,7 @@ export default function RideHistory() {
       const { data, error } = await query.order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as RideWithProfiles[];
     },
     enabled: Boolean(user?.id),
   });
