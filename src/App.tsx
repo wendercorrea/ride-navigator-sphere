@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,11 +9,10 @@ import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import Rider from "./pages/Rider";
+import RideHistory from "./pages/RideHistory";
 
 const queryClient = new QueryClient();
 
-// Componente para proteger rotas
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
@@ -23,15 +23,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  if (!user) {
-    return <Navigate to="/rider" replace />;
-  }
-
 
   return <>{children}</>;
 };
-
-
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -50,6 +44,14 @@ const App = () => (
             }
           />
           <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <RideHistory />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
