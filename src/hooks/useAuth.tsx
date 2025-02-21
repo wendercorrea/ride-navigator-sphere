@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -42,7 +43,7 @@ export function useAuth() {
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setProfile(data);
@@ -140,6 +141,7 @@ export function useAuth() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setProfile(null);
       navigate('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
