@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "./button";
-import { Menu, X, LogIn, History } from "lucide-react";
+import { Menu, X, LogIn, History, User, Home, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -21,9 +21,21 @@ export function Navbar() {
           <div className="hidden md:flex items-center space-x-8">
             {user ? (
               <>
+                <Link to="/" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
+                  <Home className="h-4 w-4 mr-1" />
+                  Início
+                </Link>
                 <Link to="/history" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
                   <History className="h-4 w-4 mr-1" />
                   Histórico
+                </Link>
+                <Link to="/notifications" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
+                  <Bell className="h-4 w-4 mr-1" />
+                  Notificações
+                </Link>
+                <Link to="/profile" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
+                  <User className="h-4 w-4 mr-1" />
+                  Perfil
                 </Link>
               </>
             ) : (
@@ -72,11 +84,32 @@ export function Navbar() {
               {user ? (
                 <>
                   <Link
+                    to="/"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-primary/10 transition-colors flex items-center"
+                  >
+                    <Home className="h-4 w-4 mr-2" />
+                    Início
+                  </Link>
+                  <Link
                     to="/history"
                     className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-primary/10 transition-colors flex items-center"
                   >
                     <History className="h-4 w-4 mr-2" />
                     Histórico
+                  </Link>
+                  <Link
+                    to="/notifications"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-primary/10 transition-colors flex items-center"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notificações
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-primary/10 transition-colors flex items-center"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Perfil
                   </Link>
                 </>
               ) : (
