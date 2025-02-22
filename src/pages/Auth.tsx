@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const Auth = () => {
   const { signIn, signUp, resetPassword, loading } = useAuth();
@@ -13,6 +16,11 @@ const Auth = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [isDriver, setIsDriver] = useState(false);
+  const [licensePlate, setLicensePlate] = useState("");
+  const [vehicleModel, setVehicleModel] = useState("");
+  const [vehicleColor, setVehicleColor] = useState("");
+  const [driverLicense, setDriverLicense] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -22,7 +30,29 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signUp(email, password, firstName, lastName, phone);
+    if (isDriver && (!licensePlate || !vehicleModel || !vehicleColor || !driverLicense)) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos do veículo",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await signUp(
+      email, 
+      password, 
+      firstName, 
+      lastName, 
+      phone,
+      isDriver,
+      isDriver ? {
+        licensePlate,
+        vehicleModel,
+        vehicleColor,
+        driverLicense,
+      } : undefined
+    );
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -114,6 +144,54 @@ const Auth = () => {
                 onChange={(e) => setPhone(e.target.value)}
                 required
               />
+
+              <div className="space-y-2">
+                <Label>Tipo de conta</Label>
+                <RadioGroup 
+                  value={isDriver ? "driver" : "passenger"}
+                  onValueChange={(value) => setIsDriver(value === "driver")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="passenger" id="passenger" />
+                    <Label htmlFor="passenger">Passageiro</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="driver" id="driver" />
+                    <Label htmlFor="driver">Motorista</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {isDriver && (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Placa do Veículo"
+                    value={licensePlate}
+                    onChange={(e) => setLicensePlate(e.target.value)}
+                    required
+                  />
+                  <Input
+                    placeholder="Modelo do Veículo"
+                    value={vehicleModel}
+                    onChange={(e) => setVehicleModel(e.target.value)}
+                    required
+                  />
+                  <Input
+                    placeholder="Cor do Veículo"
+                    value={vehicleColor}
+                    onChange={(e) => setVehicleColor(e.target.value)}
+                    required
+                  />
+                  <Input
+                    placeholder="CNH"
+                    value={driverLicense}
+                    onChange={(e) => setDriverLicense(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Cadastrando..." : "Cadastrar"}
               </Button>

@@ -6,7 +6,6 @@ import { toast } from '@/components/ui/use-toast';
 import type { Profile } from '@/types/database';
 import { User } from '@supabase/supabase-js';
 
-// Define a URL do site usando variável de ambiente ou fallback para preview URL
 const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://preview--ride-navigator-sphere.lovable.app';
 
 export function useAuth() {
@@ -100,7 +99,14 @@ export function useAuth() {
     password: string,
     firstName: string,
     lastName: string,
-    phone: string
+    phone: string,
+    isDriver: boolean,
+    driverInfo?: {
+      licensePlate: string;
+      vehicleModel: string;
+      vehicleColor: string;
+      driverLicense: string;
+    }
   ) {
     try {
       const { error: signUpError, data } = await supabase.auth.signUp({
@@ -120,6 +126,21 @@ export function useAuth() {
           });
 
         if (profileError) throw profileError;
+
+        if (isDriver && driverInfo) {
+          const { error: driverError } = await supabase
+            .from('drivers')
+            .insert({
+              id: data.user.id,
+              license_plate: driverInfo.licensePlate,
+              vehicle_model: driverInfo.vehicleModel,
+              vehicle_color: driverInfo.vehicleColor,
+              driver_license: driverInfo.driverLicense,
+              status: 'offline',
+            });
+
+          if (driverError) throw driverError;
+        }
 
         toast({
           title: 'Success',

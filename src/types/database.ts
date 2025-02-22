@@ -52,4 +52,3 @@ export type Rating = {
   comment: string | null;
   created_at: string;
 };
-
