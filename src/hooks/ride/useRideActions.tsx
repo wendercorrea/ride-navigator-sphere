@@ -1,11 +1,10 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import type { Ride } from '@/types/database';
-import { useAuth } from '../useAuth';
+import type { Rating } from '@/types/database';
 
 export function useRideActions() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
   async function cancelRide(rideId: string) {
@@ -16,20 +15,19 @@ export function useRideActions() {
         .update({
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
-        } as Partial<Ride>)
-        .eq('id', rideId)
-        .or('status.eq.pending,status.eq.accepted');
+        })
+        .eq('id', rideId);
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Ride cancelled successfully',
+        title: 'Sucesso',
+        description: 'Corrida cancelada com sucesso',
       });
     } catch (error) {
-      console.error('Error cancelling ride:', error);
+      console.error('Erro ao cancelar corrida:', error);
       toast({
-        title: 'Error',
+        title: 'Erro',
         description: error.message,
         variant: 'destructive',
       });
@@ -38,31 +36,29 @@ export function useRideActions() {
     }
   }
 
-  async function rateRide(rideId: string, toId: string, rating: number, comment?: string) {
-    if (!user) return;
-
+  async function rateRide(rideId: string, fromId: string, toId: string, rating: number, comment?: string) {
     setLoading(true);
     try {
       const { error } = await supabase
         .from('ratings')
         .insert({
           ride_id: rideId,
-          from_id: user.id,
+          from_id: fromId,
           to_id: toId,
           rating,
           comment,
-        });
+        } as Rating);
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Rating submitted successfully',
+        title: 'Sucesso',
+        description: 'Avaliação enviada com sucesso',
       });
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      console.error('Erro ao avaliar corrida:', error);
       toast({
-        title: 'Error',
+        title: 'Erro',
         description: error.message,
         variant: 'destructive',
       });
