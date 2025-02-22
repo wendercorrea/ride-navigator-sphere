@@ -1,130 +1,177 @@
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RideMap } from "@/components/RideMap";
-import type { Ride } from "@/types/database";
-import { format } from "date-fns";
-
-interface RideWithProfiles extends Ride {
-  passenger: {
-    first_name: string;
-    last_name: string;
-  };
-  driver: {
-    first_name: string;
-    last_name: string;
-  } | null;
-}
+import { toast } from "@/components/ui/use-toast";
+import { Edit2, Save, Key } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function RideHistory() {
-  const { user, profile } = useAuth();
-  const [selectedRide, setSelectedRide] = useState<RideWithProfiles | null>(null);
-  const isDriver = profile?.id && Boolean(user);
-
-  const { data: rides, isLoading } = useQuery({
-    queryKey: ["rides", user?.id, isDriver],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      
-      const query = supabase
-        .from("rides")
-        .select(`
-          *,
-          passenger:profiles!rides_passenger_id_fkey(first_name, last_name),
-          driver:profiles!rides_driver_id_fkey(first_name, last_name)
-        `);
-
-      if (isDriver) {
-        query.eq("driver_id", user.id);
-      } else {
-        query.eq("passenger_id", user.id);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return (data || []) as unknown as RideWithProfiles[];
-    },
-    enabled: Boolean(user?.id),
+  const { user, profile, signOut } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: profile?.first_name || "",
+    lastName: profile?.last_name || "",
+    phone: profile?.phone || "",
   });
 
-  if (isLoading) {
-    return <div>Carregando...</div>;
-  }
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+        })
+        .eq("id", user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso!",
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar perfil",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+      if (error) throw error;
+
+      toast({
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para resetar sua senha",
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar email de reset de senha",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">
-        {isDriver ? "Histórico de Corridas (Motorista)" : "Histórico de Viagens"}
-      </h1>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          {rides?.map((ride) => (
-            <Card 
-              key={ride.id} 
-              className={`cursor-pointer transition-colors ${
-                selectedRide?.id === ride.id ? "border-primary" : ""
-              }`}
-              onClick={() => setSelectedRide(ride)}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {format(new Date(ride.created_at), "dd/MM/yyyy HH:mm")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p><strong>De:</strong> {ride.pickup_address}</p>
-                  <p><strong>Para:</strong> {ride.destination_address}</p>
-                  <p><strong>Status:</strong> {ride.status}</p>
-                  <p>
-                    <strong>Preço:</strong>{" "}
-                    R$ {(ride.final_price || ride.estimated_price).toFixed(2)}
-                  </p>
-                  {isDriver ? (
-                    <p>
-                      <strong>Passageiro:</strong>{" "}
-                      {ride.passenger.first_name} {ride.passenger.last_name}
-                    </p>
-                  ) : ride.driver ? (
-                    <p>
-                      <strong>Motorista:</strong>{" "}
-                      {ride.driver.first_name} {ride.driver.last_name}
-                    </p>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {(!rides || rides.length === 0) && (
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">
-                  Nenhuma corrida encontrada
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <div className="h-[600px] rounded-lg overflow-hidden">
-          {selectedRide ? (
-            <RideMap ride={selectedRide} />
-          ) : (
-            <div className="h-full flex items-center justify-center bg-muted">
-              <p className="text-muted-foreground">
-                Selecione uma corrida para ver o trajeto
-              </p>
+    <div className="container mx-auto px-4 py-20">
+      {/* Profile Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Seu Perfil</CardTitle>
+              <CardDescription>
+                {user?.email}
+              </CardDescription>
             </div>
-          )}
-        </div>
-      </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(!isEditing)}
+                disabled={loading}
+              >
+                {isEditing ? (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleResetPassword}
+                disabled={loading}
+              >
+                <Key className="w-4 h-4 mr-2" />
+                Resetar Senha
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleUpdateProfile} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nome</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, firstName: e.target.value })
+                  }
+                  disabled={!isEditing || loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Sobrenome</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastName: e.target.value })
+                  }
+                  disabled={!isEditing || loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  disabled={!isEditing || loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            {isEditing && (
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            )}
+          </form>
+        </CardContent>
+      </Card>
+
+      <CardTitle className="mb-6">Histórico de Corridas</CardTitle>
+      
+      {/* Aqui você pode adicionar a lista de corridas do usuário */}
     </div>
   );
 }
