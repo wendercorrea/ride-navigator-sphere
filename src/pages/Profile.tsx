@@ -1,23 +1,46 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Edit2, Save, Key } from "lucide-react";
+import { Edit2, Save, Key, Car, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 export default function Profile() {
   const { user, profile, signOut } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isDriver, setIsDriver] = useState(false);
   const [formData, setFormData] = useState({
     firstName: profile?.first_name || "",
     lastName: profile?.last_name || "",
     phone: profile?.phone || "",
   });
+
+  useEffect(() => {
+    const checkIfDriver = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("drivers")
+          .select("id")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+        setIsDriver(!!data);
+      } catch (error) {
+        console.error("Error checking driver status:", error);
+      }
+    };
+
+    checkIfDriver();
+  }, [user?.id]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,10 +101,26 @@ export default function Profile() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <div>
+            <div className="space-y-2">
               <CardTitle>Seu Perfil</CardTitle>
-              <CardDescription>
+              <CardDescription className="flex items-center gap-2">
                 {user?.email}
+                <Badge 
+                  variant={isDriver ? "default" : "secondary"}
+                  className="flex items-center gap-1"
+                >
+                  {isDriver ? (
+                    <>
+                      <Car className="w-3 h-3" />
+                      Motorista
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-3 h-3" />
+                      Passageiro
+                    </>
+                  )}
+                </Badge>
               </CardDescription>
             </div>
             <div className="flex gap-2">
