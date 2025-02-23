@@ -8,6 +8,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRideDriver } from "@/hooks/ride/useRideDriver";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "node_modules/react-resizable-panels/dist/declarations/src/vendor/react";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PendingRideProps {
   ride: Ride;
@@ -172,3 +175,5 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
     </Card>
   );
 }
+// Removed conflicting local useEffect declaration
+
