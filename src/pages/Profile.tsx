@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Edit2, Save, Key, Car, User } from "lucide-react";
+import { Edit2, Save, Key, Car, User, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
@@ -96,6 +95,23 @@ export default function Profile() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Sucesso",
+        description: "Você foi desconectado com sucesso",
+      });
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer logout",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-20">
       <Card>
@@ -148,6 +164,14 @@ export default function Profile() {
               >
                 <Key className="w-4 h-4 mr-2" />
                 Resetar Senha
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleLogout}
+                disabled={loading}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
               </Button>
             </div>
           </div>
