@@ -1,11 +1,13 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Calendar, Clock } from "lucide-react";
+import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import type { Ride } from "@/types/database";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useRideDriver } from "@/hooks/ride/useRideDriver";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PendingRideProps {
   ride: Ride;
@@ -14,6 +16,43 @@ interface PendingRideProps {
 }
 
 export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
+  const { acceptRide } = useRideDriver();
+  const { user } = useAuth();
+  const [isAccepting, setIsAccepting] = useState(false);
+
+  // Verifica se o usuário atual é motorista
+  const [isDriver, setIsDriver] = useState(false);
+  
+  useEffect(() => {
+    const checkIfDriver = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("drivers")
+          .select("id")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+        setIsDriver(!!data);
+      } catch (error) {
+        console.error("Error checking driver status:", error);
+      }
+    };
+
+    checkIfDriver();
+  }, [user?.id]);
+
+  const handleAcceptRide = async () => {
+    setIsAccepting(true);
+    try {
+      await acceptRide(ride.id);
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -65,21 +104,65 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
               <p className="text-sm font-medium">Preço Estimado</p>
               <p className="text-lg font-semibold">R$ {ride.estimated_price.toFixed(2)}</p>
             </div>
-            <Button 
-              variant="destructive" 
-              onClick={onCancel} 
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? (
+
+            {/* Botões de ação */}
+            <div className="space-y-2">
+              {isDriver ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelando...
+                  <Button 
+                    className="w-full"
+                    onClick={handleAcceptRide}
+                    disabled={isAccepting || loading}
+                  >
+                    {isAccepting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Aceitando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Aceitar Corrida
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={onCancel} 
+                    disabled={isAccepting || loading}
+                    className="w-full"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cancelando...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Recusar Corrida
+                      </>
+                    )}
+                  </Button>
                 </>
               ) : (
-                'Cancelar Corrida'
+                <Button 
+                  variant="destructive" 
+                  onClick={onCancel} 
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cancelando...
+                    </>
+                  ) : (
+                    'Cancelar Corrida'
+                  )}
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
           <div className="h-[200px] md:h-full relative rounded-lg overflow-hidden">
             <RideMap ride={ride} />
