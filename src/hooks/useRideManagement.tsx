@@ -37,6 +37,56 @@ export function useRideManagement() {
     checkIfDriver();
   }, [user?.id]);
 
+  // Buscar corrida pendente do passageiro
+  useEffect(() => {
+    if (!user?.id || isDriver) return;
+
+    const fetchPendingRide = async () => {
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('passenger_id', user.id)
+        .eq('status', 'pending')
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') { // Ignore "no rows returned" error
+          console.error("Error fetching pending ride:", error);
+        }
+        return;
+      }
+
+      setPendingRide(data);
+    };
+
+    fetchPendingRide();
+
+    // Inscrever para atualizações em tempo real da corrida do passageiro
+    const channel = supabase
+      .channel('passenger-ride')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rides',
+          filter: `passenger_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE' || (payload.new as Ride).status !== 'pending') {
+            setPendingRide(null);
+          } else {
+            setPendingRide(payload.new as Ride);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, isDriver]);
+
   // Buscar corridas disponíveis para motoristas
   useEffect(() => {
     if (!isDriver) return;
@@ -95,7 +145,6 @@ export function useRideManagement() {
     };
   }, [isDriver]);
 
-  // Função para simular coordenadas baseadas no endereço
   const getCoordinates = useCallback((address: string) => {
     const hash = Array.from(address).reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return {
@@ -123,7 +172,7 @@ export function useRideManagement() {
     );
 
     try {
-      await requestRide({
+      const ride = await requestRide({
         pickup_latitude: pickupCoords.latitude,
         pickup_longitude: pickupCoords.longitude,
         destination_latitude: destinationCoords.latitude,
@@ -133,6 +182,7 @@ export function useRideManagement() {
         estimated_price: estimatedPrice,
       });
 
+      setPendingRide(ride);
       setPickup("");
       setDestination("");
     } catch (error) {
