@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -16,14 +17,14 @@ export function useRideRequest() {
     pickup_address: string;
     destination_address: string;
     estimated_price: number;
-  }) {
+  }): Promise<Ride> {
     if (!user) {
       toast({
         title: 'Erro',
         description: 'Você precisa estar logado para solicitar uma corrida',
         variant: 'destructive',
       });
-      return;
+      throw new Error('User not authenticated');
     }
 
     setLoading(true);
@@ -40,20 +41,25 @@ export function useRideRequest() {
       }
 
       // Se o perfil existe, cria a corrida
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('rides')
         .insert({
           passenger_id: user.id,
           ...rideData,
           status: 'pending',
-        } as Ride);
+        } as Ride)
+        .select()
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned from ride creation');
 
       toast({
         title: 'Sucesso',
         description: 'Corrida solicitada com sucesso',
       });
+
+      return data;
     } catch (error) {
       console.error('Erro ao solicitar corrida:', error);
       toast({
@@ -61,6 +67,7 @@ export function useRideRequest() {
         description: error.message,
         variant: 'destructive',
       });
+      throw error;
     } finally {
       setLoading(false);
     }
