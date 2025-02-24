@@ -46,12 +46,9 @@ export function PassengerHome({
         <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
           Corridas Seguras e Confiáveis
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-          Sua Jornada, Nossa Prioridade
-        </h1>
+
         <p className="text-lg text-muted-foreground max-w-[600px] mx-auto">
-          Experimente um serviço de transporte premium com nossa plataforma de 
-          ride-hailing. Solicite sua corrida em segundos.
+          Solicite seu transporte em segundos.
         </p>
       </div>
 

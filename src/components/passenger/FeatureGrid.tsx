@@ -11,11 +11,11 @@ export function FeatureGrid() {
         },
         {
           title: "Corridas Seguras",
-          description: "Motoristas verificados e recursos de segurança",
+          description: "Monitoramento",
         },
         {
-          title: "Suporte 24/7",
-          description: "Atendimento ao cliente 24 horas para sua tranquilidade",
+          title: "Suporte",
+          description: "Atendimento ao cliente para sua tranquilidade",
         },
       ].map((feature, index) => (
         <Card key={index} className="p-6 text-center glass-effect">
