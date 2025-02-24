@@ -176,5 +176,3 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
     </Card>
   );
 }
-// Removed conflicting local useEffect declaration
-
