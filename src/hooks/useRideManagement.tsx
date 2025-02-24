@@ -46,7 +46,7 @@ export function useRideManagement() {
         .from('rides')
         .select('*')
         .eq('passenger_id', user.id)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'accepted'])
         .single();
 
       if (error) {
@@ -73,10 +73,15 @@ export function useRideManagement() {
           filter: `passenger_id=eq.${user.id}`,
         },
         (payload) => {
-          if (payload.eventType === 'DELETE' || (payload.new as Ride).status !== 'pending') {
+          if (payload.eventType === 'DELETE') {
             setPendingRide(null);
           } else {
-            setPendingRide(payload.new as Ride);
+            const updatedRide = payload.new as Ride;
+            if (['pending', 'accepted'].includes(updatedRide.status)) {
+              setPendingRide(updatedRide);
+            } else {
+              setPendingRide(null);
+            }
           }
         }
       )

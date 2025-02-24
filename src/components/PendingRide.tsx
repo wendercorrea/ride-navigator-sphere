@@ -1,17 +1,15 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle, Car } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import type { Ride } from "@/types/database";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRideDriver } from "@/hooks/ride/useRideDriver";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
-
 
 interface PendingRideProps {
   ride: Ride;
@@ -19,14 +17,22 @@ interface PendingRideProps {
   loading?: boolean;
 }
 
+type DriverInfo = {
+  first_name: string;
+  last_name: string;
+  vehicle_model: string;
+  vehicle_color: string;
+  license_plate: string;
+};
+
 export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
   const { acceptRide } = useRideDriver();
   const { user } = useAuth();
   const [isAccepting, setIsAccepting] = useState(false);
-
-  // Verifica se o usuário atual é motorista
   const [isDriver, setIsDriver] = useState(false);
+  const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   
+  // Verifica se o usuário atual é motorista
   useEffect(() => {
     const checkIfDriver = async () => {
       if (!user?.id) return;
@@ -48,6 +54,42 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
     checkIfDriver();
   }, [user?.id]);
 
+  // Busca informações do motorista se a corrida foi aceita
+  useEffect(() => {
+    const fetchDriverInfo = async () => {
+      if (!ride.driver_id) return;
+
+      try {
+        const { data: driverData, error: driverError } = await supabase
+          .from('drivers')
+          .select('license_plate, vehicle_model, vehicle_color')
+          .eq('id', ride.driver_id)
+          .single();
+
+        if (driverError) throw driverError;
+
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', ride.driver_id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (driverData && profileData) {
+          setDriverInfo({
+            ...driverData,
+            ...profileData
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching driver info:', error);
+      }
+    };
+
+    fetchDriverInfo();
+  }, [ride.driver_id]);
+
   const handleAcceptRide = async () => {
     setIsAccepting(true);
     try {
@@ -60,7 +102,7 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Corrida Solicitada</CardTitle>
+        <CardTitle>Corrida {ride.status === 'accepted' ? 'Aceita' : 'Solicitada'}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -109,9 +151,28 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
               <p className="text-lg font-semibold">R$ {ride.estimated_price.toFixed(2)}</p>
             </div>
 
+            {/* Informações do motorista quando a corrida for aceita */}
+            {ride.status === 'accepted' && driverInfo && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Car className="w-5 h-5 text-primary" />
+                  <h3 className="font-medium">Informações do Motorista</h3>
+                </div>
+                <p className="text-sm">
+                  Motorista: {driverInfo.first_name} {driverInfo.last_name}
+                </p>
+                <p className="text-sm">
+                  Veículo: {driverInfo.vehicle_model} - {driverInfo.vehicle_color}
+                </p>
+                <p className="text-sm">
+                  Placa: {driverInfo.license_plate}
+                </p>
+              </div>
+            )}
+
             {/* Botões de ação */}
             <div className="space-y-2">
-              {isDriver ? (
+              {isDriver && ride.status === 'pending' ? (
                 <>
                   <Button 
                     className="w-full"
@@ -130,26 +191,8 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
                       </>
                     )}
                   </Button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={onCancel} 
-                    disabled={isAccepting || loading}
-                    className="w-full"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Cancelando...
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Recusar Corrida
-                      </>
-                    )}
-                  </Button>
                 </>
-              ) : (
+              ) : !isDriver && (
                 <Button 
                   variant="destructive" 
                   onClick={onCancel} 
@@ -162,7 +205,10 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
                       Cancelando...
                     </>
                   ) : (
-                    'Cancelar Corrida'
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Cancelar Corrida
+                    </>
                   )}
                 </Button>
               )}
