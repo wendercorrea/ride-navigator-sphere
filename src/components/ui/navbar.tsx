@@ -40,22 +40,14 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
-                  About
-                </a>
-                <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
-                  Services
-                </a>
-                <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
-                  Contact
-                </a>
+               <Link to="/" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
+                  <Home className="h-4 w-4 mr-1" />
+                  Início
+                </Link>
                 <Link to="/auth" className="text-foreground/80 hover:text-foreground transition-colors flex items-center">
                   <LogIn className="h-4 w-4 mr-1" />
                   Login
                 </Link>
-                <Button variant="default" size="sm">
-                  Get Started
-                </Button>
               </>
             )}
           </div>
