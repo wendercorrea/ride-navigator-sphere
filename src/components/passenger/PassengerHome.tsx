@@ -7,16 +7,19 @@ import { MapPin, Search } from "lucide-react";
 import { PendingRide } from "@/components/PendingRide";
 import type { Ride } from "@/types/database";
 import { FeatureGrid } from "./FeatureGrid";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface PassengerHomeProps {
   pickup: string;
   destination: string;
   loading: boolean;
   pendingRide: Ride | null;
+  showCancelDialog: boolean;
   onPickupChange: (value: string) => void;
   onDestinationChange: (value: string) => void;
   onRequestRide: () => void;
   onCancelRide: () => void;
+  setShowCancelDialog: (show: boolean) => void;
 }
 
 export function PassengerHome({ 
@@ -24,10 +27,12 @@ export function PassengerHome({
   destination, 
   loading, 
   pendingRide,
+  showCancelDialog,
   onPickupChange,
   onDestinationChange,
   onRequestRide,
-  onCancelRide
+  onCancelRide,
+  setShowCancelDialog,
 }: PassengerHomeProps) {
   if (pendingRide) {
     return (
@@ -46,7 +51,6 @@ export function PassengerHome({
         <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
           Corridas Seguras e Confiáveis
         </div>
-
         <p className="text-lg text-muted-foreground max-w-[600px] mx-auto">
           Solicite seu transporte em segundos.
         </p>
@@ -92,6 +96,23 @@ export function PassengerHome({
           </Button>
         </div>
       </Card>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar corrida atual?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você já tem uma corrida pendente. Deseja cancelá-la e solicitar uma nova corrida?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, manter corrida atual</AlertDialogCancel>
+            <AlertDialogAction onClick={onCancelRide}>
+              Sim, cancelar e solicitar nova
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <FeatureGrid />
     </>

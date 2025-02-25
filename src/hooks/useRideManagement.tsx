@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Ride } from "@/types/database";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export function useRideManagement() {
   const [pickup, setPickup] = useState("");
@@ -14,6 +15,14 @@ export function useRideManagement() {
   const [pendingRide, setPendingRide] = useState<Ride | null>(null);
   const [availableRides, setAvailableRides] = useState<Ride[]>([]);
   const [isDriver, setIsDriver] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [newRideRequest, setNewRideRequest] = useState<{
+    pickup: string;
+    destination: string;
+    pickupCoords: { latitude: number; longitude: number };
+    destinationCoords: { latitude: number; longitude: number };
+    estimatedPrice: number;
+  } | null>(null);
 
   // Verificar se o usuário é motorista
   useEffect(() => {
@@ -39,7 +48,7 @@ export function useRideManagement() {
 
   // Buscar corrida pendente do passageiro
   useEffect(() => {
-    if (!user?.id || isDriver) return;
+    if (!user?.id) return;
 
     const fetchPendingRide = async () => {
       const { data, error } = await supabase
@@ -47,12 +56,10 @@ export function useRideManagement() {
         .select('*')
         .eq('passenger_id', user.id)
         .in('status', ['pending', 'accepted'])
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code !== 'PGRST116') { // Ignore "no rows returned" error
-          console.error("Error fetching pending ride:", error);
-        }
+        console.error("Error fetching pending ride:", error);
         return;
       }
 
@@ -79,6 +86,12 @@ export function useRideManagement() {
             const updatedRide = payload.new as Ride;
             if (['pending', 'accepted'].includes(updatedRide.status)) {
               setPendingRide(updatedRide);
+              toast({
+                title: "Status da Corrida",
+                description: updatedRide.status === 'accepted' ? 
+                  "Sua corrida foi aceita por um motorista!" : 
+                  "Status da corrida atualizado",
+              });
             } else {
               setPendingRide(null);
             }
@@ -90,25 +103,44 @@ export function useRideManagement() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, isDriver]);
+  }, [user?.id]);
 
   // Buscar corridas disponíveis para motoristas
   useEffect(() => {
-    if (!isDriver) return;
+    if (!isDriver || !user?.id) return;
 
     const fetchAvailableRides = async () => {
       const { data, error } = await supabase
         .from('rides')
         .select('*')
-        .eq('status', 'pending')
-        .is('driver_id', null);
+        .in('status', ['pending', 'accepted'])
+        .eq('driver_id', user.id)
+        .maybeSingle();
 
       if (error) {
-        console.error("Error fetching available rides:", error);
+        console.error("Error fetching driver rides:", error);
         return;
       }
 
-      setAvailableRides(data);
+      if (data) {
+        // Se o motorista já tem uma corrida, não buscar outras
+        setAvailableRides([]);
+        return;
+      }
+
+      // Buscar corridas disponíveis se o motorista não tiver uma corrida ativa
+      const { data: availableData, error: availableError } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('status', 'pending')
+        .is('driver_id', null);
+
+      if (availableError) {
+        console.error("Error fetching available rides:", availableError);
+        return;
+      }
+
+      setAvailableRides(availableData || []);
     };
 
     fetchAvailableRides();
@@ -148,7 +180,7 @@ export function useRideManagement() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isDriver]);
+  }, [isDriver, user?.id]);
 
   const getCoordinates = useCallback((address: string) => {
     const hash = Array.from(address).reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -176,6 +208,29 @@ export function useRideManagement() {
       (destinationCoords.longitude - pickupCoords.longitude) * 100
     );
 
+    // Se já existe uma corrida pendente, mostrar diálogo de confirmação
+    if (pendingRide) {
+      setNewRideRequest({
+        pickup,
+        destination,
+        pickupCoords,
+        destinationCoords,
+        estimatedPrice,
+      });
+      setShowCancelDialog(true);
+      return;
+    }
+
+    await createNewRide(pickup, destination, pickupCoords, destinationCoords, estimatedPrice);
+  };
+
+  const createNewRide = async (
+    pickup: string,
+    destination: string,
+    pickupCoords: { latitude: number; longitude: number },
+    destinationCoords: { latitude: number; longitude: number },
+    estimatedPrice: number
+  ) => {
     try {
       const ride = await requestRide({
         pickup_latitude: pickupCoords.latitude,
@@ -190,8 +245,15 @@ export function useRideManagement() {
       setPendingRide(ride);
       setPickup("");
       setDestination("");
+      setNewRideRequest(null);
+      setShowCancelDialog(false);
     } catch (error) {
       console.error("Error requesting ride:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao solicitar corrida",
+        variant: "destructive",
+      });
     }
   };
 
@@ -200,8 +262,24 @@ export function useRideManagement() {
       try {
         await cancelRide(pendingRide.id);
         setPendingRide(null);
+        
+        // Se existe uma nova solicitação pendente, criar após cancelar
+        if (newRideRequest) {
+          await createNewRide(
+            newRideRequest.pickup,
+            newRideRequest.destination,
+            newRideRequest.pickupCoords,
+            newRideRequest.destinationCoords,
+            newRideRequest.estimatedPrice
+          );
+        }
       } catch (error) {
         console.error("Error canceling ride:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao cancelar corrida",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -217,5 +295,7 @@ export function useRideManagement() {
     isDriver,
     handleRequestRide,
     handleCancelRide,
+    showCancelDialog,
+    setShowCancelDialog,
   };
 }
