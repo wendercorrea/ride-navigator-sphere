@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface PendingRideProps {
   ride: Ride;
   onCancel: () => void;
+  onConclude: () => void;
   loading?: boolean;
 }
 
@@ -25,7 +26,7 @@ type DriverInfo = {
   license_plate: string;
 };
 
-export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
+export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRideProps) {
   const { acceptRide } = useRideDriver();
   const { user } = useAuth();
   const [isAccepting, setIsAccepting] = useState(false);
@@ -209,8 +210,62 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
                     </>
                   )}
                 </Button>
+                
               )}
+                           
             </div>
+
+
+
+
+
+          {/* Botões de ação */}
+          <div className="space-y-2">
+              {isDriver && ride.status === 'pending' ? (
+                <>
+                  <Button 
+                    className="w-full"
+                    onClick={handleAcceptRide}
+                    disabled={isAccepting || loading}
+                  >
+                    {isAccepting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Aceitando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Aceitar Corrida
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : !isDriver && (
+                <Button 
+                  variant="default"
+                  onClick={onConclude} 
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cancelando...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Concluir Solicitação de Transporte
+                    </>
+                  )}
+                </Button>
+                
+              )}
+                           
+            </div>
+
+
           </div>
           <div className="h-[400px] md:h-full relative rounded-lg overflow-hidden">
             <RideMap ride={ride} />

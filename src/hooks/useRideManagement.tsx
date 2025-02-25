@@ -25,6 +25,7 @@ export function useRideManagement() {
 
   // Verificar se o usuário é motorista
   useEffect(() => {
+    debugger;
     const checkIfDriver = async () => {
       if (!user?.id) return;
       
@@ -47,6 +48,7 @@ export function useRideManagement() {
 
   // Buscar corrida pendente do passageiro
   useEffect(() => {
+    debugger;
     if (!user?.id) return;
 
     const fetchPendingRide = async () => {
@@ -78,7 +80,6 @@ export function useRideManagement() {
           event: '*',
           schema: 'public',
           table: 'rides',
-          filter: `passenger_id=eq.${user.id}`,
         },
         (payload) => {
           console.log("Realtime update received:", payload);
@@ -109,6 +110,7 @@ export function useRideManagement() {
 
   // Buscar corridas disponíveis para motoristas
   useEffect(() => {
+    debugger;
     if (!isDriver || !user?.id) return;
 
     const fetchAvailableRides = async () => {
