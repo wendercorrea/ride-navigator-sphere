@@ -15,6 +15,8 @@ const Index = () => {
     isDriver,
     handleRequestRide,
     handleCancelRide,
+    showCancelDialog,
+    setShowCancelDialog,
   } = useRideManagement();
 
   return (
@@ -25,7 +27,7 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="relative container mx-auto px-4 py-20 min-h-screen flex flex-col items-center space-y-12">
-        {isDriver && !pendingRide ? (
+        {isDriver ? (
           <DriverHome 
             availableRides={availableRides}
             loading={loading}
@@ -36,10 +38,12 @@ const Index = () => {
             destination={destination}
             loading={loading}
             pendingRide={pendingRide}
+            showCancelDialog={showCancelDialog}
             onPickupChange={setPickup}
             onDestinationChange={setDestination}
             onRequestRide={handleRequestRide}
             onCancelRide={handleCancelRide}
+            setShowCancelDialog={setShowCancelDialog}
           />
         )}
       </div>

@@ -34,37 +34,43 @@ export function useRideRequest() {
         .from('profiles')
         .select('id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !profile) {
+      if (profileError) {
+        throw new Error('Erro ao verificar perfil do usuário');
+      }
+
+      if (!profile) {
         throw new Error('Perfil de usuário não encontrado. Por favor, faça login novamente.');
       }
 
       // Se o perfil existe, cria a corrida
-      const { data, error } = await supabase
+      const { data: rides, error: rideError } = await supabase
         .from('rides')
         .insert({
           passenger_id: user.id,
           ...rideData,
           status: 'pending',
-        } as Ride)
+        })
         .select()
-        .single();
+        .limit(1);
 
-      if (error) throw error;
-      if (!data) throw new Error('No data returned from ride creation');
+      if (rideError) throw rideError;
+      if (!rides || rides.length === 0) throw new Error('No data returned from ride creation');
+
+      const ride = rides[0];
 
       toast({
         title: 'Sucesso',
         description: 'Corrida solicitada com sucesso',
       });
 
-      return data;
+      return ride;
     } catch (error) {
       console.error('Erro ao solicitar corrida:', error);
       toast({
         title: 'Erro',
-        description: error.message,
+        description: error.message || 'Erro ao solicitar corrida',
         variant: 'destructive',
       });
       throw error;
