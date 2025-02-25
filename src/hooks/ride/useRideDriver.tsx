@@ -3,19 +3,20 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../useAuth';
 import { toast } from '@/components/ui/use-toast';
+import type { Ride } from '@/types/database';
 
 export function useRideDriver() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const acceptRide = async (rideId: string) => {
+  const acceptRide = async (rideId: string): Promise<Ride> => {
     if (!user) {
       toast({
         title: 'Erro',
         description: 'Você precisa estar logado para aceitar uma corrida',
         variant: 'destructive',
       });
-      return;
+      throw new Error('User not authenticated');
     }
 
     setLoading(true);
@@ -69,8 +70,108 @@ export function useRideDriver() {
     }
   };
 
+  const startRide = async (rideId: string): Promise<Ride> => {
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para iniciar uma corrida',
+        variant: 'destructive',
+      });
+      throw new Error('User not authenticated');
+    }
+
+    setLoading(true);
+    try {
+      const { data: ride, error: rideError } = await supabase
+        .from('rides')
+        .update({ 
+          status: 'in_progress',
+          started_at: new Date().toISOString()
+        })
+        .eq('id', rideId)
+        .eq('driver_id', user.id)
+        .select()
+        .maybeSingle();
+
+      if (rideError) throw rideError;
+      if (!ride) throw new Error('Corrida não encontrada');
+
+      toast({
+        title: 'Sucesso',
+        description: 'Corrida iniciada com sucesso!',
+      });
+
+      return ride;
+    } catch (error) {
+      console.error('Error starting ride:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao iniciar corrida',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completeRide = async (rideId: string): Promise<Ride> => {
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para finalizar uma corrida',
+        variant: 'destructive',
+      });
+      throw new Error('User not authenticated');
+    }
+
+    setLoading(true);
+    try {
+      const { data: ride, error: rideError } = await supabase
+        .from('rides')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', rideId)
+        .eq('driver_id', user.id)
+        .select()
+        .maybeSingle();
+
+      if (rideError) throw rideError;
+      if (!ride) throw new Error('Corrida não encontrada');
+
+      // Atualiza o status do motorista para disponível
+      const { error: updateDriverError } = await supabase
+        .from('drivers')
+        .update({ status: 'online' })
+        .eq('id', user.id);
+
+      if (updateDriverError) throw updateDriverError;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Corrida finalizada com sucesso!',
+      });
+
+      return ride;
+    } catch (error) {
+      console.error('Error completing ride:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao finalizar corrida',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     acceptRide,
+    startRide,
+    completeRide,
     loading,
   };
 }
