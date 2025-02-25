@@ -205,7 +205,7 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
                   ) : (
                     <>
                       <XCircle className="mr-2 h-4 w-4" />
-                      Cancelar Corrida
+                      Cancelar Solicitação de Transporte
                     </>
                   )}
                 </Button>
