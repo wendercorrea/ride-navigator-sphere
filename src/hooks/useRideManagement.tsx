@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Ride } from "@/types/database";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export function useRideManagement() {
   const [pickup, setPickup] = useState("");
@@ -51,6 +50,7 @@ export function useRideManagement() {
     if (!user?.id) return;
 
     const fetchPendingRide = async () => {
+      console.log("Fetching pending ride for user:", user.id);
       const { data, error } = await supabase
         .from('rides')
         .select('*')
@@ -63,12 +63,13 @@ export function useRideManagement() {
         return;
       }
 
+      console.log("Pending ride data:", data);
       setPendingRide(data);
     };
 
     fetchPendingRide();
 
-    // Inscrever para atualizações em tempo real da corrida do passageiro
+    // Inscrever para atualizações em tempo real
     const channel = supabase
       .channel('passenger-ride')
       .on(
@@ -80,6 +81,7 @@ export function useRideManagement() {
           filter: `passenger_id=eq.${user.id}`,
         },
         (payload) => {
+          console.log("Realtime update received:", payload);
           if (payload.eventType === 'DELETE') {
             setPendingRide(null);
           } else {
@@ -208,7 +210,6 @@ export function useRideManagement() {
       (destinationCoords.longitude - pickupCoords.longitude) * 100
     );
 
-    // Se já existe uma corrida pendente, mostrar diálogo de confirmação
     if (pendingRide) {
       setNewRideRequest({
         pickup,
@@ -232,6 +233,14 @@ export function useRideManagement() {
     estimatedPrice: number
   ) => {
     try {
+      console.log("Creating new ride with data:", {
+        pickup,
+        destination,
+        pickupCoords,
+        destinationCoords,
+        estimatedPrice
+      });
+
       const ride = await requestRide({
         pickup_latitude: pickupCoords.latitude,
         pickup_longitude: pickupCoords.longitude,
@@ -242,6 +251,7 @@ export function useRideManagement() {
         estimated_price: estimatedPrice,
       });
 
+      console.log("New ride created:", ride);
       setPendingRide(ride);
       setPickup("");
       setDestination("");
@@ -263,7 +273,6 @@ export function useRideManagement() {
         await cancelRide(pendingRide.id);
         setPendingRide(null);
         
-        // Se existe uma nova solicitação pendente, criar após cancelar
         if (newRideRequest) {
           await createNewRide(
             newRideRequest.pickup,

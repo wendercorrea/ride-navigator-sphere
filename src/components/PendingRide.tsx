@@ -32,7 +32,6 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
   const [isDriver, setIsDriver] = useState(false);
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   
-  // Verifica se o usuário atual é motorista
   useEffect(() => {
     const checkIfDriver = async () => {
       if (!user?.id) return;
@@ -42,7 +41,7 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
           .from("drivers")
           .select("id")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         setIsDriver(!!data);
@@ -54,7 +53,6 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
     checkIfDriver();
   }, [user?.id]);
 
-  // Busca informações do motorista se a corrida foi aceita
   useEffect(() => {
     const fetchDriverInfo = async () => {
       if (!ride.driver_id) return;
@@ -64,7 +62,7 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
           .from('drivers')
           .select('license_plate, vehicle_model, vehicle_color')
           .eq('id', ride.driver_id)
-          .single();
+          .maybeSingle();
 
         if (driverError) throw driverError;
 
@@ -72,7 +70,7 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
           .from('profiles')
           .select('first_name, last_name')
           .eq('id', ride.driver_id)
-          .single();
+          .maybeSingle();
 
         if (profileError) throw profileError;
 
@@ -214,7 +212,7 @@ export function PendingRide({ ride, onCancel, loading }: PendingRideProps) {
               )}
             </div>
           </div>
-          <div className="h-[200px] md:h-full relative rounded-lg overflow-hidden">
+          <div className="h-[400px] md:h-full relative rounded-lg overflow-hidden">
             <RideMap ride={ride} />
           </div>
         </div>
