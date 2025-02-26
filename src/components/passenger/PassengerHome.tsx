@@ -39,6 +39,7 @@ export function PassengerHome({
       <PendingRide 
         ride={pendingRide} 
         onCancel={onCancelRide}
+        onConclude={() => {}} // Adicionado para satisfazer o tipo
         loading={loading}
       />
     );

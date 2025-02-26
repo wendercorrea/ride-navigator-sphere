@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { PendingRide } from "@/components/PendingRide";
 import type { Ride } from "@/types/database";
@@ -23,6 +24,7 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
                 key={ride.id}
                 ride={ride}
                 onCancel={() => {}} // Não usado para motoristas
+                onConclude={() => {}} // Adicionado para satisfazer o tipo
                 loading={loading}
               />
             ))

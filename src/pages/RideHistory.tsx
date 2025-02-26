@@ -31,8 +31,6 @@ export default function RideHistory() {
       if (!user) return;
 
       try {
-        // Para passageiros: todas as corridas
-        // Para motoristas: apenas corridas aceitas
         const query = supabase
           .from('rides')
           .select(`
@@ -47,7 +45,6 @@ export default function RideHistory() {
             )
           `);
 
-        // Verifica se é motorista
         const { data: driverCheck } = await supabase
           .from('drivers')
           .select('id')
@@ -55,10 +52,8 @@ export default function RideHistory() {
           .maybeSingle();
 
         if (driverCheck) {
-          // Se for motorista, mostra apenas corridas que ele aceitou
           query.eq('driver_id', user.id);
         } else {
-          // Se for passageiro, mostra todas as suas corridas
           query.eq('passenger_id', user.id);
         }
 
@@ -66,7 +61,14 @@ export default function RideHistory() {
 
         if (error) throw error;
 
-        setRides(data as ExtendedRide[]);
+        // Convertemos explicitamente o tipo dos dados retornados
+        const formattedRides = (data as any[]).map(ride => ({
+          ...ride,
+          passenger: ride.passenger,
+          driver: ride.driver ? ride.driver[0] : null // Corrigindo o array para objeto único
+        }));
+
+        setRides(formattedRides as ExtendedRide[]);
       } catch (error) {
         console.error("Error fetching ride history:", error);
         toast({
