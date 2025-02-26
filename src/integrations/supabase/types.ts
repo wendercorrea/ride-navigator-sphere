@@ -250,7 +250,7 @@ export type Database = {
       }
     }
     Enums: {
-      driver_status: "offline" | "online" | "on_ride"
+      driver_status: "offline" | "online" | "on_ride" | "null"
       ride_status:
         | "pending"
         | "accepted"
