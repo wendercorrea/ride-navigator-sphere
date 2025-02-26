@@ -20,6 +20,7 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
   const [isOnline, setIsOnline] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [initialStatusLoaded, setInitialStatusLoaded] = useState(false);
+  const [acceptedRide, setAcceptedRide] = useState<Ride | null>(null);
 
   useEffect(() => {
     const fetchDriverStatus = async () => {
@@ -47,6 +48,59 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
     };
 
     fetchDriverStatus();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchAcceptedRide = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('rides')
+          .select('*')
+          .eq('driver_id', user.id)
+          .in('status', ['accepted', 'in_progress'])
+          .maybeSingle();
+
+        if (error) throw error;
+        setAcceptedRide(data);
+      } catch (error) {
+        console.error('Error fetching accepted ride:', error);
+      }
+    };
+
+    fetchAcceptedRide();
+
+    // Inscrever para atualizações em tempo real
+    const channel = supabase
+      .channel('driver-rides')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rides',
+          filter: `driver_id=eq.${user?.id}`,
+        },
+        (payload) => {
+          console.log('Realtime update:', payload);
+          if (payload.eventType === 'DELETE') {
+            setAcceptedRide(null);
+          } else {
+            const ride = payload.new as Ride;
+            if (['accepted', 'in_progress'].includes(ride.status)) {
+              setAcceptedRide(ride);
+            } else {
+              setAcceptedRide(null);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const updateDriverStatus = async (online: boolean) => {
@@ -114,29 +168,44 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
         </div>
       </Card>
 
-      <h2 className="text-2xl font-bold">Corridas Disponíveis</h2>
-      {loading ? (
-        <Card className="p-8 text-center text-muted-foreground">
-          Carregando corridas disponíveis...
-        </Card>
+      {acceptedRide ? (
+        <>
+          <h2 className="text-2xl font-bold">Sua Corrida Atual</h2>
+          <PendingRide
+            key={acceptedRide.id}
+            ride={acceptedRide}
+            onCancel={() => {}} // Não usado para motoristas
+            onConclude={() => {}} // Será implementado posteriormente
+            loading={loading}
+          />
+        </>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {availableRides.length > 0 ? (
-            availableRides.map((ride) => (
-              <PendingRide
-                key={ride.id}
-                ride={ride}
-                onCancel={() => {}} // Não usado para motoristas
-                onConclude={() => {}} // Adicionado para satisfazer o tipo
-                loading={loading}
-              />
-            ))
-          ) : (
+        <>
+          <h2 className="text-2xl font-bold">Corridas Disponíveis</h2>
+          {loading ? (
             <Card className="p-8 text-center text-muted-foreground">
-              Nenhuma corrida disponível no momento. Por favor, verifique novamente mais tarde.
+              Carregando corridas disponíveis...
             </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {availableRides.length > 0 ? (
+                availableRides.map((ride) => (
+                  <PendingRide
+                    key={ride.id}
+                    ride={ride}
+                    onCancel={() => {}}
+                    onConclude={() => {}}
+                    loading={loading}
+                  />
+                ))
+              ) : (
+                <Card className="p-8 text-center text-muted-foreground">
+                  Nenhuma corrida disponível no momento. Por favor, verifique novamente mais tarde.
+                </Card>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
