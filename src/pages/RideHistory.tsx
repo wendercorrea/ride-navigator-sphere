@@ -3,21 +3,27 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import type { Ride, Profile } from "@/types/database";
+import type { Ride } from "@/types/database";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Calendar, Clock, Car } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { RideMap } from "@/components/RideMap";
 
-type RideWithProfiles = Ride & {
-  passenger: Profile;
-  driver: Profile | null;
-};
+interface ExtendedRide extends Ride {
+  passenger: {
+    first_name: string;
+    last_name: string;
+  };
+  driver: {
+    first_name: string;
+    last_name: string;
+  } | null;
+}
 
 export default function RideHistory() {
   const { user } = useAuth();
-  const [rides, setRides] = useState<RideWithProfiles[]>([]);
+  const [rides, setRides] = useState<ExtendedRide[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,19 +31,42 @@ export default function RideHistory() {
       if (!user) return;
 
       try {
-        const { data, error } = await supabase
+        // Para passageiros: todas as corridas
+        // Para motoristas: apenas corridas aceitas
+        const query = supabase
           .from('rides')
           .select(`
             *,
-            passenger:profiles!rides_passenger_id_fkey(*),
-            driver:profiles!rides_driver_id_fkey(*)
-          `)
-          .or(`passenger_id.eq.${user.id},driver_id.eq.${user.id}`)
-          .order('created_at', { ascending: false });
+            passenger:profiles!rides_passenger_id_fkey(
+              first_name,
+              last_name
+            ),
+            driver:profiles!rides_driver_id_fkey(
+              first_name,
+              last_name
+            )
+          `);
+
+        // Verifica se é motorista
+        const { data: driverCheck } = await supabase
+          .from('drivers')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (driverCheck) {
+          // Se for motorista, mostra apenas corridas que ele aceitou
+          query.eq('driver_id', user.id);
+        } else {
+          // Se for passageiro, mostra todas as suas corridas
+          query.eq('passenger_id', user.id);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        setRides(data || []);
+        setRides(data as ExtendedRide[]);
       } catch (error) {
         console.error("Error fetching ride history:", error);
         toast({
