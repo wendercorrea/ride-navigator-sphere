@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { PendingRide } from "@/components/PendingRide";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
+import { useRideDriver } from "@/hooks/ride/useRideDriver";
 
 interface DriverHomeProps {
   availableRides: Ride[];
@@ -17,6 +17,7 @@ interface DriverHomeProps {
 
 export function DriverHome({ availableRides, loading }: DriverHomeProps) {
   const { user } = useAuth();
+  const { startRide, completeRide } = useRideDriver();
   const [isOnline, setIsOnline] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [initialStatusLoaded, setInitialStatusLoaded] = useState(false);
@@ -71,7 +72,6 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
 
     fetchAcceptedRide();
 
-    // Inscrever para atualizações em tempo real
     const channel = supabase
       .channel('driver-rides')
       .on(
@@ -127,14 +127,32 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
         description: "Não foi possível atualizar o status",
         variant: "destructive",
       });
-      // Reverter o estado em caso de erro
       setIsOnline(!online);
     } finally {
       setIsUpdatingStatus(false);
     }
   };
 
-  // Não mostrar nada até carregar o status inicial
+  const handleStartRide = async () => {
+    if (!acceptedRide) return;
+    try {
+      const updatedRide = await startRide(acceptedRide.id);
+      setAcceptedRide(updatedRide);
+    } catch (error) {
+      console.error('Error starting ride:', error);
+    }
+  };
+
+  const handleCompleteRide = async () => {
+    if (!acceptedRide) return;
+    try {
+      await completeRide(acceptedRide.id);
+      setAcceptedRide(null);
+    } catch (error) {
+      console.error('Error completing ride:', error);
+    }
+  };
+
   if (!initialStatusLoaded) {
     return (
       <div className="w-full max-w-4xl space-y-4">
@@ -175,7 +193,7 @@ export function DriverHome({ availableRides, loading }: DriverHomeProps) {
             key={acceptedRide.id}
             ride={acceptedRide}
             onCancel={() => {}} // Não usado para motoristas
-            onConclude={() => {}} // Será implementado posteriormente
+            onConclude={acceptedRide.status === 'accepted' ? handleStartRide : handleCompleteRide}
             loading={loading}
           />
         </>

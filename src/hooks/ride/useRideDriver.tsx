@@ -141,6 +141,28 @@ export function useRideDriver() {
       if (rideError) throw rideError;
       if (!ride) throw new Error('Corrida não encontrada');
 
+      // Criar log da corrida
+      const { error: logError } = await supabase
+        .from('ride_logs')
+        .insert({
+          ride_id: ride.id,
+          driver_id: ride.driver_id,
+          passenger_id: ride.passenger_id,
+          pickup_address: ride.pickup_address,
+          destination_address: ride.destination_address,
+          pickup_latitude: ride.pickup_latitude,
+          pickup_longitude: ride.pickup_longitude,
+          destination_latitude: ride.destination_latitude,
+          destination_longitude: ride.destination_longitude,
+          estimated_price: ride.estimated_price,
+          final_price: ride.final_price,
+          started_at: ride.started_at,
+          completed_at: ride.completed_at,
+          cancelled_at: ride.cancelled_at,
+        });
+
+      if (logError) throw logError;
+
       // Atualiza o status do motorista para disponível
       const { error: updateDriverError } = await supabase
         .from('drivers')

@@ -141,6 +141,71 @@ export type Database = {
           },
         ]
       }
+      ride_logs: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          destination_address: string
+          destination_latitude: number
+          destination_longitude: number
+          driver_id: string
+          estimated_price: number
+          final_price: number | null
+          id: string
+          passenger_id: string
+          pickup_address: string
+          pickup_latitude: number
+          pickup_longitude: number
+          ride_id: string
+          started_at: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          destination_address: string
+          destination_latitude: number
+          destination_longitude: number
+          driver_id: string
+          estimated_price: number
+          final_price?: number | null
+          id?: string
+          passenger_id: string
+          pickup_address: string
+          pickup_latitude: number
+          pickup_longitude: number
+          ride_id: string
+          started_at?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          destination_address?: string
+          destination_latitude?: number
+          destination_longitude?: number
+          driver_id?: string
+          estimated_price?: number
+          final_price?: number | null
+          id?: string
+          passenger_id?: string
+          pickup_address?: string
+          pickup_latitude?: number
+          pickup_longitude?: number
+          ride_id?: string
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_logs_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rides: {
         Row: {
           cancelled_at: string | null
