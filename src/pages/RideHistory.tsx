@@ -9,6 +9,9 @@ import { ptBR } from "date-fns/locale";
 import { MapPin, Calendar, Clock, Car, User, DollarSign, BadgeCheck } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { RideMap } from "@/components/RideMap";
+import { Database } from "@/integrations/supabase/types";
+
+type RideStatus = Database["public"]["Enums"]["ride_status"];
 
 interface ExtendedRide extends Ride {
   passenger: {
@@ -25,7 +28,7 @@ export default function RideHistory() {
   const { user } = useAuth();
   const [rides, setRides] = useState<ExtendedRide[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string | null>(null);
+  const [filter, setFilter] = useState<RideStatus | null>(null);
 
   useEffect(() => {
     const fetchRideHistory = async () => {
@@ -176,7 +179,7 @@ export default function RideHistory() {
             >
               Todas
             </button>
-            {['completed', 'cancelled', 'pending', 'accepted', 'in_progress'].map(status => (
+            {(['completed', 'cancelled', 'pending', 'accepted', 'in_progress'] as RideStatus[]).map(status => (
               <button 
                 key={status} 
                 onClick={() => setFilter(status)}
