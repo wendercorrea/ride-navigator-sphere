@@ -141,7 +141,14 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
       key={ride.id}
       ride={ride}
       onCancel={() => {}} 
-      onConclude={ride.status === 'accepted' ? handleStartRide : handleCompleteRide}
+      onConclude={() => {
+        // Determine qual função chamar com base no status atual
+        if (ride.status === 'accepted') {
+          handleStartRide();
+        } else if (ride.status === 'in_progress') {
+          handleCompleteRide();
+        }
+      }}
       loading={loading}
     />
   );
