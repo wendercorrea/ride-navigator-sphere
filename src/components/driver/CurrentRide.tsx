@@ -3,11 +3,13 @@ import { PendingRide } from "@/components/PendingRide";
 import type { Ride } from "@/types/database";
 import { useRideDriver } from "@/hooks/ride/useRideDriver";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; 
-import { CheckCircle, Loader2, Play } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; 
+import { CheckCircle, Loader2, Play, User, Car, MapPin } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CurrentRideProps {
   ride: Ride;
@@ -16,6 +18,28 @@ interface CurrentRideProps {
 
 export function CurrentRide({ ride, loading }: CurrentRideProps) {
   const { startRide, completeRide } = useRideDriver();
+  const [passengerInfo, setPassengerInfo] = useState<{first_name: string; last_name: string; phone: string | null} | null>(null);
+
+  useEffect(() => {
+    const fetchPassengerInfo = async () => {
+      if (!ride?.passenger_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, phone')
+          .eq('id', ride.passenger_id)
+          .single();
+          
+        if (error) throw error;
+        setPassengerInfo(data);
+      } catch (error) {
+        console.error('Error fetching passenger info:', error);
+      }
+    };
+    
+    fetchPassengerInfo();
+  }, [ride?.passenger_id]);
 
   const handleStartRide = async () => {
     if (!ride) return;
@@ -41,12 +65,35 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Corrida Aceita</CardTitle>
+          <CardDescription>
+            O passageiro está aguardando sua chegada
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
+              {passengerInfo && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-5 w-5 text-primary" />
+                    <p className="font-medium">Informações do Passageiro</p>
+                  </div>
+                  <p className="text-sm">
+                    Nome: {passengerInfo.first_name} {passengerInfo.last_name}
+                  </p>
+                  {passengerInfo.phone && (
+                    <p className="text-sm">
+                      Telefone: {passengerInfo.phone}
+                    </p>
+                  )}
+                </div>
+              )}
+              
               <div className="p-4 bg-muted rounded-lg">
-                <p className="font-medium">Passageiro está aguardando</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <p className="font-medium">Detalhes da Corrida</p>
+                </div>
                 <p className="text-sm mt-2">
                   Endereço de embarque: {ride.pickup_address}
                 </p>
@@ -90,14 +137,22 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Corrida em Andamento</CardTitle>
+          {passengerInfo && (
+            <CardDescription>
+              Passageiro: {passengerInfo.first_name} {passengerInfo.last_name}
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
               <div className="p-4 bg-muted rounded-lg">
-                <p className="font-medium">Corrida iniciada em</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Car className="h-5 w-5 text-primary" />
+                  <p className="font-medium">Informações da Corrida</p>
+                </div>
                 <p className="text-sm">
-                  {ride.started_at && format(new Date(ride.started_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                  Iniciada em: {ride.started_at && format(new Date(ride.started_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                 </p>
                 <p className="text-sm mt-2">
                   Destino: {ride.destination_address}
