@@ -46,6 +46,8 @@ const Index = () => {
             onRequestRide={handleRequestRide}
             onCancelRide={handleCancelRide}
             setShowCancelDialog={setShowCancelDialog}
+            updatePickupWithCoords={updatePickupWithCoords}
+            updateDestinationWithCoords={updateDestinationWithCoords}
           />
         )}
       </div>

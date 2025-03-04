@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { FeatureGrid } from "./FeatureGrid";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { RideMap } from "@/components/RideMap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/use-toast";
 
 interface PassengerHomeProps {
   pickup: string;
@@ -22,6 +23,8 @@ interface PassengerHomeProps {
   onRequestRide: () => void;
   onCancelRide: () => void;
   setShowCancelDialog: (show: boolean) => void;
+  updatePickupWithCoords?: (address: string, lat: number, lng: number) => void;
+  updateDestinationWithCoords?: (address: string, lat: number, lng: number) => void;
 }
 
 export function PassengerHome({ 
@@ -35,21 +38,39 @@ export function PassengerHome({
   onRequestRide,
   onCancelRide,
   setShowCancelDialog,
+  updatePickupWithCoords,
+  updateDestinationWithCoords,
 }: PassengerHomeProps) {
   const [activeTab, setActiveTab] = useState("form");
   const [pickupCoords, setPickupCoords] = useState<{lat: number, lng: number} | null>(null);
   const [destinationCoords, setDestinationCoords] = useState<{lat: number, lng: number} | null>(null);
   const [selectingPickup, setSelectingPickup] = useState(true);
+  const [mapKey, setMapKey] = useState(Date.now()); // Used to force map re-render
 
+  // Handle location selection from map
   const handleLocationSelect = (lat: number, lng: number, address: string) => {
     if (selectingPickup) {
       setPickupCoords({ lat, lng });
-      onPickupChange(address);
+      if (updatePickupWithCoords) {
+        updatePickupWithCoords(address, lat, lng);
+      } else {
+        onPickupChange(address);
+      }
     } else {
       setDestinationCoords({ lat, lng });
-      onDestinationChange(address);
+      if (updateDestinationWithCoords) {
+        updateDestinationWithCoords(address, lat, lng);
+      } else {
+        onDestinationChange(address);
+      }
     }
   };
+
+  // Update map when switching between pickup and destination
+  useEffect(() => {
+    // Force map re-render when switching selection mode
+    setMapKey(Date.now());
+  }, [selectingPickup]);
 
   if (pendingRide) {
     return (
@@ -69,6 +90,7 @@ export function PassengerHome({
         <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
           Corridas Seguras e Confiáveis
         </div>
+        <h1 className="text-4xl font-bold tracking-tight">Uper</h1>
         <p className="text-lg text-muted-foreground max-w-[600px] mx-auto">
           Solicite seu transporte em segundos.
         </p>
@@ -124,10 +146,11 @@ export function PassengerHome({
                 Destino
               </Button>
             </div>
-            <div className="h-[300px] rounded-lg overflow-hidden">
+            <div className="h-[300px] rounded-lg overflow-hidden" key={mapKey}>
               <RideMap 
                 selectionMode={true} 
                 onLocationSelect={handleLocationSelect}
+                initialLocation={selectingPickup ? pickupCoords : destinationCoords}
               />
             </div>
             <div className="text-sm text-muted-foreground">
