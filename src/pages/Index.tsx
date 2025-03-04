@@ -17,6 +17,8 @@ const Index = () => {
     handleCancelRide,
     showCancelDialog,
     setShowCancelDialog,
+    updatePickupWithCoords,
+    updateDestinationWithCoords,
   } = useRideManagement();
 
   return (

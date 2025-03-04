@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 export function useRideManagement() {
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
+  const [pickupCoords, setPickupCoords] = useState<{latitude: number, longitude: number} | null>(null);
+  const [destinationCoords, setDestinationCoords] = useState<{latitude: number, longitude: number} | null>(null);
   const { requestRide, cancelRide, loading } = useRide();
   const { user } = useAuth();
   const [pendingRide, setPendingRide] = useState<Ride | null>(null);
@@ -23,9 +25,19 @@ export function useRideManagement() {
     estimatedPrice: number;
   } | null>(null);
 
+  // Update coordinates when addresses change
+  useEffect(() => {
+    if (pickup && !pickupCoords) {
+      setPickupCoords(getCoordinates(pickup));
+    }
+    
+    if (destination && !destinationCoords) {
+      setDestinationCoords(getCoordinates(destination));
+    }
+  }, [pickup, destination, pickupCoords, destinationCoords]);
+
   // Verificar se o usuário é motorista
   useEffect(() => {
-    debugger;
     const checkIfDriver = async () => {
       if (!user?.id) return;
       
@@ -48,7 +60,6 @@ export function useRideManagement() {
 
   // Buscar corrida pendente do passageiro
   useEffect(() => {
-    debugger;
     if (!user?.id) return;
 
     const fetchPendingRide = async () => {
@@ -110,7 +121,6 @@ export function useRideManagement() {
 
   // Buscar corridas disponíveis para motoristas
   useEffect(() => {
-    debugger;
     if (!isDriver || !user?.id) return;
 
     const fetchAvailableRides = async () => {
@@ -187,12 +197,29 @@ export function useRideManagement() {
   }, [isDriver, user?.id]);
 
   const getCoordinates = useCallback((address: string) => {
+    // If we have an actual map service this would be replaced with a geocoding call
     const hash = Array.from(address).reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return {
       latitude: -23.55 + (hash % 10) / 100,
       longitude: -46.63 + (hash % 10) / 100,
     };
   }, []);
+
+  const updatePickupWithCoords = (address: string, lat: number, lng: number) => {
+    setPickup(address);
+    setPickupCoords({
+      latitude: lat,
+      longitude: lng
+    });
+  };
+
+  const updateDestinationWithCoords = (address: string, lat: number, lng: number) => {
+    setDestination(address);
+    setDestinationCoords({
+      latitude: lat,
+      longitude: lng
+    });
+  };
 
   const handleRequestRide = async () => {
     if (!pickup || !destination) {
@@ -204,27 +231,28 @@ export function useRideManagement() {
       return;
     }
 
-    const pickupCoords = getCoordinates(pickup);
-    const destinationCoords = getCoordinates(destination);
+    // Use existing coordinates or generate from address
+    const actualPickupCoords = pickupCoords || getCoordinates(pickup);
+    const actualDestinationCoords = destinationCoords || getCoordinates(destination);
 
     const estimatedPrice = Math.abs(
-      (destinationCoords.latitude - pickupCoords.latitude) * 100 +
-      (destinationCoords.longitude - pickupCoords.longitude) * 100
+      (actualDestinationCoords.latitude - actualPickupCoords.latitude) * 100 +
+      (actualDestinationCoords.longitude - actualPickupCoords.longitude) * 100
     );
 
     if (pendingRide) {
       setNewRideRequest({
         pickup,
         destination,
-        pickupCoords,
-        destinationCoords,
+        pickupCoords: actualPickupCoords,
+        destinationCoords: actualDestinationCoords,
         estimatedPrice,
       });
       setShowCancelDialog(true);
       return;
     }
 
-    await createNewRide(pickup, destination, pickupCoords, destinationCoords, estimatedPrice);
+    await createNewRide(pickup, destination, actualPickupCoords, actualDestinationCoords, estimatedPrice);
   };
 
   const createNewRide = async (
@@ -257,6 +285,8 @@ export function useRideManagement() {
       setPendingRide(ride);
       setPickup("");
       setDestination("");
+      setPickupCoords(null);
+      setDestinationCoords(null);
       setNewRideRequest(null);
       setShowCancelDialog(false);
     } catch (error) {
@@ -308,5 +338,7 @@ export function useRideManagement() {
     handleCancelRide,
     showCancelDialog,
     setShowCancelDialog,
+    updatePickupWithCoords,
+    updateDestinationWithCoords,
   };
 }

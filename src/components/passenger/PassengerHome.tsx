@@ -8,6 +8,8 @@ import { PendingRide } from "@/components/PendingRide";
 import type { Ride } from "@/types/database";
 import { FeatureGrid } from "./FeatureGrid";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { RideMap } from "@/components/RideMap";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PassengerHomeProps {
   pickup: string;
@@ -34,6 +36,21 @@ export function PassengerHome({
   onCancelRide,
   setShowCancelDialog,
 }: PassengerHomeProps) {
+  const [activeTab, setActiveTab] = useState("form");
+  const [pickupCoords, setPickupCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [destinationCoords, setDestinationCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [selectingPickup, setSelectingPickup] = useState(true);
+
+  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+    if (selectingPickup) {
+      setPickupCoords({ lat, lng });
+      onPickupChange(address);
+    } else {
+      setDestinationCoords({ lat, lng });
+      onDestinationChange(address);
+    }
+  };
+
   if (pendingRide) {
     return (
       <PendingRide 
@@ -59,29 +76,71 @@ export function PassengerHome({
 
       {/* Ride Booking Card */}
       <Card className="w-full max-w-md p-6 animate-fade-up glass-effect">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Local de partida"
-                className="pl-10"
-                value={pickup}
-                onChange={(e) => onPickupChange(e.target.value)}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="form">Endereço</TabsTrigger>
+            <TabsTrigger value="map">Mapa</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="form" className="space-y-4">
+            <div className="space-y-2">
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Local de partida"
+                  className="pl-10"
+                  value={pickup}
+                  onChange={(e) => onPickupChange(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Para onde?"
+                  className="pl-10"
+                  value={destination}
+                  onChange={(e) => onDestinationChange(e.target.value)}
+                />
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="map" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Button 
+                variant={selectingPickup ? "default" : "outline"}
+                onClick={() => setSelectingPickup(true)}
+                className="flex-1"
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Origem
+              </Button>
+              <Button 
+                variant={!selectingPickup ? "default" : "outline"}
+                onClick={() => setSelectingPickup(false)}
+                className="flex-1"
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Destino
+              </Button>
+            </div>
+            <div className="h-[300px] rounded-lg overflow-hidden">
+              <RideMap 
+                selectionMode={true} 
+                onLocationSelect={handleLocationSelect}
               />
             </div>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Para onde?"
-                className="pl-10"
-                value={destination}
-                onChange={(e) => onDestinationChange(e.target.value)}
-              />
+            <div className="text-sm text-muted-foreground">
+              {selectingPickup ? (
+                pickup ? `Origem: ${pickup}` : "Selecione o local de origem no mapa"
+              ) : (
+                destination ? `Destino: ${destination}` : "Selecione o destino no mapa"
+              )}
             </div>
-          </div>
+          </TabsContent>
+          
           <Button 
-            className="w-full" 
+            className="w-full mt-4" 
             size="lg" 
             onClick={onRequestRide}
             disabled={loading || !pickup || !destination}
@@ -95,7 +154,7 @@ export function PassengerHome({
               </>
             )}
           </Button>
-        </div>
+        </Tabs>
       </Card>
 
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
