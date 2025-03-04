@@ -1,7 +1,7 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle, Car } from "lucide-react";
+import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle, Car, Navigation } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import type { Ride } from "@/types/database";
 import { format } from "date-fns";
@@ -10,6 +10,7 @@ import { useRideDriver } from "@/hooks/ride/useRideDriver";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocationTracking } from "@/hooks/useLocationTracking";
 
 interface PendingRideProps {
   ride: Ride;
@@ -32,6 +33,23 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDriver, setIsDriver] = useState(false);
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  
+  const {
+    startTracking,
+    stopTracking,
+    currentLocation,
+    partnerLocation,
+    isTracking,
+  } = useLocationTracking(ride.id);
+  
+  // Start location tracking when the component mounts
+  useEffect(() => {
+    startTracking();
+    
+    return () => {
+      stopTracking();
+    };
+  }, [startTracking, stopTracking]);
   
   useEffect(() => {
     const checkIfDriver = async () => {
@@ -169,6 +187,21 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
               </div>
             )}
 
+            {/* Status de localização em tempo real */}
+            {ride.status === 'accepted' && partnerLocation && (
+              <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Navigation className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">
+                    Motorista a caminho
+                  </span>
+                </div>
+                <p className="text-xs text-green-600">
+                  Acompanhe a localização do motorista no mapa
+                </p>
+              </div>
+            )}
+
             {/* Botões de ação */}
             <div className="space-y-2">
               {isDriver && ride.status === 'pending' ? (
@@ -210,38 +243,9 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
                     </>
                   )}
                 </Button>
-                
               )}
-                           
-            </div>
-
-
-
-
-
-          {/* Botões de ação */}
-          <div className="space-y-2">
-              {isDriver && ride.status === 'pending' ? (
-                <>
-                  <Button 
-                    className="w-full"
-                    onClick={handleAcceptRide}
-                    disabled={isAccepting || loading}
-                  >
-                    {isAccepting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Aceitando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Aceitar Corrida
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : !isDriver && (
+              
+              {(isDriver || ride.status === 'accepted') && (
                 <Button 
                   variant="default"
                   onClick={onConclude} 
@@ -251,24 +255,26 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Cancelando...
+                      Processando...
                     </>
                   ) : (
                     <>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Concluir Solicitação de Transporte
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      {isDriver ? "Iniciar Corrida" : "Concluir Corrida"}
                     </>
                   )}
                 </Button>
-                
               )}
-                           
             </div>
-
-
           </div>
           <div className="h-[400px] md:h-full relative rounded-lg overflow-hidden">
-            <RideMap ride={ride} />
+            <RideMap 
+              ride={ride} 
+              driverLocation={partnerLocation && isDriver ? null : partnerLocation}
+              passengerLocation={!isDriver ? currentLocation : null}
+              trackingMode={true}
+              showRoute={true}
+            />
           </div>
         </div>
       </CardContent>

@@ -4,12 +4,13 @@ import type { Ride } from "@/types/database";
 import { useRideDriver } from "@/hooks/ride/useRideDriver";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; 
-import { CheckCircle, Loader2, Play, User, Car, MapPin } from "lucide-react";
+import { CheckCircle, Loader2, Play, User, Car, MapPin, Navigation } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocationTracking } from "@/hooks/useLocationTracking";
 
 interface CurrentRideProps {
   ride: Ride;
@@ -19,6 +20,23 @@ interface CurrentRideProps {
 export function CurrentRide({ ride, loading }: CurrentRideProps) {
   const { startRide, completeRide } = useRideDriver();
   const [passengerInfo, setPassengerInfo] = useState<{first_name: string; last_name: string; phone: string | null} | null>(null);
+  
+  const {
+    startTracking,
+    stopTracking,
+    currentLocation,
+    partnerLocation,
+    isTracking,
+  } = useLocationTracking(ride.id);
+  
+  // Start location tracking when the component mounts
+  useEffect(() => {
+    startTracking();
+    
+    return () => {
+      stopTracking();
+    };
+  }, [startTracking, stopTracking]);
 
   useEffect(() => {
     const fetchPassengerInfo = async () => {
@@ -105,6 +123,21 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
+              {/* Status de localização em tempo real */}
+              {partnerLocation && (
+                <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Navigation className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">
+                      Localização do passageiro
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-600">
+                    A localização atual do passageiro está visível no mapa
+                  </p>
+                </div>
+              )}
+              
               <Button 
                 onClick={handleStartRide} 
                 disabled={loading}
@@ -124,7 +157,13 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
               </Button>
             </div>
             <div className="h-[300px] md:h-full relative rounded-lg overflow-hidden">
-              <RideMap ride={ride} />
+              <RideMap 
+                ride={ride} 
+                driverLocation={currentLocation}
+                passengerLocation={partnerLocation}
+                trackingMode={true}
+                showRoute={true}
+              />
             </div>
           </div>
         </CardContent>
@@ -162,6 +201,21 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
+              {/* Status de localização em tempo real */}
+              {partnerLocation && (
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Navigation className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700">
+                      Navegação em tempo real
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-600">
+                    Você e o passageiro estão sendo rastreados no mapa
+                  </p>
+                </div>
+              )}
+              
               <Button 
                 onClick={handleCompleteRide} 
                 disabled={loading}
@@ -182,7 +236,13 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
               </Button>
             </div>
             <div className="h-[300px] md:h-full relative rounded-lg overflow-hidden">
-              <RideMap ride={ride} />
+              <RideMap 
+                ride={ride}
+                driverLocation={currentLocation}
+                passengerLocation={partnerLocation}
+                trackingMode={true}
+                showRoute={true}
+              />
             </div>
           </div>
         </CardContent>

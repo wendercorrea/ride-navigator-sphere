@@ -4,7 +4,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import type { Ride } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { MapPin, Locate, Search } from "lucide-react";
+import { MapPin, Locate, Search, Navigation } from "lucide-react";
 import { toast } from "./ui/use-toast";
 
 interface RideMapProps {
@@ -12,18 +12,28 @@ interface RideMapProps {
   onLocationSelect?: (lat: number, lng: number, address: string) => void;
   selectionMode?: boolean;
   initialLocation?: { lat: number, lng: number } | null;
+  driverLocation?: { latitude: number, longitude: number } | null;
+  passengerLocation?: { latitude: number, longitude: number } | null;
+  showRoute?: boolean;
+  trackingMode?: boolean;
 }
 
 export function RideMap({ 
   ride, 
   onLocationSelect, 
   selectionMode = false,
-  initialLocation = null
+  initialLocation = null,
+  driverLocation = null,
+  passengerLocation = null,
+  showRoute = true,
+  trackingMode = false
 }: RideMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const [currentMarker, setCurrentMarker] = useState<google.maps.Marker | null>(null);
+  const driverMarkerRef = useRef<google.maps.Marker | null>(null);
+  const passengerMarkerRef = useRef<google.maps.Marker | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [searchValue, setSearchValue] = useState("");
@@ -193,8 +203,8 @@ export function RideMap({
           console.log("Initial marker placed at:", initialLocation);
         }
 
-        // If we have a ride, show the route
-        if (ride) {
+        // If we have a ride and showRoute is true, show the route
+        if (ride && showRoute) {
           const pickupLocation = {
             lat: ride.pickup_latitude,
             lng: ride.pickup_longitude,
@@ -209,6 +219,11 @@ export function RideMap({
           const directionsRenderer = new google.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: "#4f46e5",
+              strokeWeight: 5,
+              strokeOpacity: 0.7
+            }
           });
 
           directionsRendererRef.current = directionsRenderer;
@@ -248,6 +263,53 @@ export function RideMap({
           );
         }
         
+        // If we're in tracking mode, set up driver and passenger markers
+        if (trackingMode) {
+          if (driverLocation) {
+            // Create or update driver marker
+            if (driverMarkerRef.current) {
+              driverMarkerRef.current.setPosition({
+                lat: driverLocation.latitude,
+                lng: driverLocation.longitude
+              });
+            } else {
+              driverMarkerRef.current = new google.maps.Marker({
+                position: {
+                  lat: driverLocation.latitude,
+                  lng: driverLocation.longitude
+                },
+                map,
+                title: "Motorista",
+                icon: {
+                  url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                },
+              });
+            }
+          }
+          
+          if (passengerLocation) {
+            // Create or update passenger marker
+            if (passengerMarkerRef.current) {
+              passengerMarkerRef.current.setPosition({
+                lat: passengerLocation.latitude,
+                lng: passengerLocation.longitude
+              });
+            } else {
+              passengerMarkerRef.current = new google.maps.Marker({
+                position: {
+                  lat: passengerLocation.latitude,
+                  lng: passengerLocation.longitude
+                },
+                map,
+                title: "Passageiro",
+                icon: {
+                  url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+                },
+              });
+            }
+          }
+        }
+        
         console.log("Map initialization completed successfully");
       } catch (error) {
         console.error("Error loading map:", error);
@@ -271,8 +333,64 @@ export function RideMap({
       if (currentMarker) {
         currentMarker.setMap(null);
       }
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setMap(null);
+      }
+      if (passengerMarkerRef.current) {
+        passengerMarkerRef.current.setMap(null);
+      }
     };
-  }, [ride, selectionMode, onLocationSelect, initialLocation]);
+  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute]);
+
+  // Update driver and passenger markers when their locations change
+  useEffect(() => {
+    if (!mapInstanceRef.current || !trackingMode) return;
+    
+    if (driverLocation && driverLocation.latitude && driverLocation.longitude) {
+      const position = {
+        lat: driverLocation.latitude,
+        lng: driverLocation.longitude
+      };
+      
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setPosition(position);
+      } else {
+        driverMarkerRef.current = new google.maps.Marker({
+          position,
+          map: mapInstanceRef.current,
+          title: "Motorista",
+          icon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          },
+        });
+      }
+      
+      // Center map on driver if it exists
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.panTo(position);
+      }
+    }
+    
+    if (passengerLocation && passengerLocation.latitude && passengerLocation.longitude) {
+      const position = {
+        lat: passengerLocation.latitude,
+        lng: passengerLocation.longitude
+      };
+      
+      if (passengerMarkerRef.current) {
+        passengerMarkerRef.current.setPosition(position);
+      } else {
+        passengerMarkerRef.current = new google.maps.Marker({
+          position,
+          map: mapInstanceRef.current,
+          title: "Passageiro",
+          icon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+          },
+        });
+      }
+    }
+  }, [driverLocation, passengerLocation, trackingMode]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -391,6 +509,18 @@ export function RideMap({
         <Locate className="mr-2 h-4 w-4" />
         Usar minha localização
       </Button>
+      {trackingMode && (
+        <div className="absolute bottom-4 left-4 flex items-center gap-2">
+          <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
+            <div className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse"></div>
+            Motorista
+          </div>
+          <div className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
+            Passageiro
+          </div>
+        </div>
+      )}
     </div>
   );
 }
