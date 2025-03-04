@@ -141,6 +141,41 @@ export type Database = {
           },
         ]
       }
+      ride_location_updates: {
+        Row: {
+          driver_latitude: number | null
+          driver_longitude: number | null
+          passenger_latitude: number | null
+          passenger_longitude: number | null
+          ride_id: string
+          updated_at: string
+        }
+        Insert: {
+          driver_latitude?: number | null
+          driver_longitude?: number | null
+          passenger_latitude?: number | null
+          passenger_longitude?: number | null
+          ride_id: string
+          updated_at?: string
+        }
+        Update: {
+          driver_latitude?: number | null
+          driver_longitude?: number | null
+          passenger_latitude?: number | null
+          passenger_longitude?: number | null
+          ride_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_location_updates_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: true
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ride_logs: {
         Row: {
           cancelled_at: string | null
@@ -312,6 +347,16 @@ export type Database = {
           vehicle_color: string
           rating: number
         }[]
+      }
+      update_ride_location: {
+        Args: {
+          p_ride_id: string
+          p_driver_lat?: number
+          p_driver_lng?: number
+          p_passenger_lat?: number
+          p_passenger_lng?: number
+        }
+        Returns: undefined
       }
     }
     Enums: {
