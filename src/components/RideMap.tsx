@@ -27,25 +27,49 @@ export function RideMap({
   const [isLoading, setIsLoading] = useState(false);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [searchValue, setSearchValue] = useState("");
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     async function initMap() {
       try {
         setIsLoading(true);
-        const { data: { GOOGLE_MAPS_API_KEY }, error } = await supabase
-          .functions.invoke('get-maps-key');
-          
-        if (error) throw error;
-
+        console.log("Starting map initialization...");
+        
+        // Clear any previous errors
+        setMapError(null);
+        
+        // Get the Google Maps API key from Supabase Functions
+        console.log("Fetching Google Maps API key...");
+        const { data, error } = await supabase.functions.invoke('get-maps-key');
+        
+        if (error) {
+          console.error("Error fetching Google Maps API key:", error);
+          throw new Error(`Failed to get Maps API key: ${error.message}`);
+        }
+        
+        if (!data || !data.GOOGLE_MAPS_API_KEY) {
+          console.error("No Google Maps API key returned:", data);
+          throw new Error("Google Maps API key not found");
+        }
+        
+        const GOOGLE_MAPS_API_KEY = data.GOOGLE_MAPS_API_KEY;
+        console.log("API key retrieved, loading Google Maps...");
+        
+        // Initialize the Google Maps loader
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: "weekly",
           libraries: ["places"],
         });
 
+        // Load the Google Maps API
         const google = await loader.load();
+        console.log("Google Maps API loaded successfully");
         
-        if (!mapRef.current) return;
+        if (!mapRef.current) {
+          console.error("Map container reference not found");
+          return;
+        }
 
         // Default center (use ride pickup location if available, otherwise use a default location)
         const defaultCenter = ride ? {
@@ -53,6 +77,8 @@ export function RideMap({
           lng: ride.pickup_longitude,
         } : initialLocation || { lat: -23.55, lng: -46.63 }; // São Paulo as default
 
+        // Create the map
+        console.log("Creating map with center:", defaultCenter);
         const map = new google.maps.Map(mapRef.current, {
           center: defaultCenter,
           zoom: 15,
@@ -69,6 +95,7 @@ export function RideMap({
         
         // Initialize geocoder
         setGeocoder(new google.maps.Geocoder());
+        console.log("Geocoder initialized");
 
         // Create searchbox for location search
         if (selectionMode) {
@@ -106,6 +133,9 @@ export function RideMap({
                 );
               }
             });
+            console.log("Autocomplete initialized");
+          } else {
+            console.warn("Search input element not found");
           }
           
           // If in selection mode, allow clicking on the map to set a marker
@@ -144,6 +174,7 @@ export function RideMap({
               });
             }
           });
+          console.log("Map click listener added");
         }
 
         // If initialLocation exists and we're in selection mode, place a marker
@@ -159,6 +190,7 @@ export function RideMap({
           });
           
           setCurrentMarker(marker);
+          console.log("Initial marker placed at:", initialLocation);
         }
 
         // If we have a ride, show the route
@@ -208,15 +240,21 @@ export function RideMap({
             (result, status) => {
               if (status === "OK" && result) {
                 directionsRenderer.setDirections(result);
+                console.log("Directions rendered successfully");
+              } else {
+                console.warn("Failed to get directions:", status);
               }
             }
           );
         }
+        
+        console.log("Map initialization completed successfully");
       } catch (error) {
         console.error("Error loading map:", error);
+        setMapError(error instanceof Error ? error.message : String(error));
         toast({
-          title: "Erro",
-          description: "Falha ao carregar o mapa. Por favor, tente novamente.",
+          title: "Erro no Mapa",
+          description: "Falha ao carregar o Google Maps. Verifique a conexão e tente novamente.",
           variant: "destructive",
         });
       } finally {
@@ -288,7 +326,7 @@ export function RideMap({
         (error) => {
           console.error("Error getting location:", error);
           toast({
-            title: "Erro",
+            title: "Erro de Localização",
             description: "Falha ao obter sua localização. Verifique se o acesso à localização está permitido.",
             variant: "destructive",
           });
@@ -325,6 +363,23 @@ export function RideMap({
       {isLoading && (
         <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      )}
+      {mapError && (
+        <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center p-4 text-center">
+          <div className="text-destructive mb-2">Erro ao carregar o mapa</div>
+          <div className="text-sm text-muted-foreground mb-4">
+            {mapError.includes("API key") 
+              ? "Chave de API do Google Maps inválida ou não configurada." 
+              : mapError}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.location.reload()}
+          >
+            Tentar novamente
+          </Button>
         </div>
       )}
       <Button 
