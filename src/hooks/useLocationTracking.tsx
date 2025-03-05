@@ -16,10 +16,12 @@ export function useLocationTracking(rideId?: string) {
   const { user } = useAuth();
   const [isTracking, setIsTracking] = useState(false);
   const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mapUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [partnerLocation, setPartnerLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isDriver, setIsDriver] = useState<boolean | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const lastLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   // Check if the user is a driver
   useEffect(() => {
@@ -124,12 +126,20 @@ export function useLocationTracking(rideId?: string) {
       
       if (error) throw error;
       
-      setCurrentLocation({ latitude, longitude });
+      lastLocationRef.current = { latitude, longitude };
+      
     } catch (error) {
       console.error('Error updating location:', error);
       setLocationError(`Failed to update location: ${error.message}`);
     }
   }, [user?.id, rideId, isDriver]);
+
+  // Update location data in the UI state (separate from server updates)
+  const updateLocationState = useCallback(() => {
+    if (lastLocationRef.current) {
+      setCurrentLocation(lastLocationRef.current);
+    }
+  }, []);
 
   // Start tracking location
   const startTracking = useCallback(() => {
@@ -157,17 +167,22 @@ export function useLocationTracking(rideId?: string) {
       }
     };
     
-    // Update location immediately
+    // Update location data immediately
     trackLocation();
     
-    // Set up interval for regular updates - agora a cada 5 segundos para atualizações mais frequentes
-    const interval = setInterval(trackLocation, 5000);
-    locationUpdateIntervalRef.current = interval;
+    // Set up interval for regular location data updates (every 3 seconds)
+    const dataInterval = setInterval(trackLocation, 3000);
+    locationUpdateIntervalRef.current = dataInterval;
+    
+    // Set up separate interval for UI updates (every 15 seconds)
+    const uiInterval = setInterval(updateLocationState, 15000);
+    mapUpdateIntervalRef.current = uiInterval;
     
     return () => {
-      if (interval) clearInterval(interval);
+      if (dataInterval) clearInterval(dataInterval);
+      if (uiInterval) clearInterval(uiInterval);
     };
-  }, [isTracking, user?.id, rideId, getCurrentPosition, updateLocation]);
+  }, [isTracking, user?.id, rideId, getCurrentPosition, updateLocation, updateLocationState]);
 
   // Stop tracking location
   const stopTracking = useCallback(() => {
@@ -176,6 +191,11 @@ export function useLocationTracking(rideId?: string) {
     if (locationUpdateIntervalRef.current) {
       clearInterval(locationUpdateIntervalRef.current);
       locationUpdateIntervalRef.current = null;
+    }
+    
+    if (mapUpdateIntervalRef.current) {
+      clearInterval(mapUpdateIntervalRef.current);
+      mapUpdateIntervalRef.current = null;
     }
     
     setIsTracking(false);
@@ -187,6 +207,9 @@ export function useLocationTracking(rideId?: string) {
     return () => {
       if (locationUpdateIntervalRef.current) {
         clearInterval(locationUpdateIntervalRef.current);
+      }
+      if (mapUpdateIntervalRef.current) {
+        clearInterval(mapUpdateIntervalRef.current);
       }
     };
   }, []);

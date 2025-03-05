@@ -7,6 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple in-memory cache to rate limit updates
+const updateCache = new Map();
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -24,6 +27,23 @@ serve(async (req) => {
     if (!userId || latitude === undefined || longitude === undefined) {
       throw new Error("Missing required fields: userId, latitude, longitude");
     }
+    
+    const cacheKey = `${rideId}-${userType}-${userId}`;
+    const now = Date.now();
+    const lastUpdate = updateCache.get(cacheKey) || 0;
+    
+    // Only allow updates every 2 seconds to reduce DB writes
+    if (now - lastUpdate < 2000) {
+      return new Response(
+        JSON.stringify({ success: true, throttled: true }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+    
+    updateCache.set(cacheKey, now);
     
     console.log(`Updating location for ${userType} ${userId}: lat ${latitude}, lng ${longitude}`);
     

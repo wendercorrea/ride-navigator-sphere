@@ -3,6 +3,7 @@ import { useRideManagement } from "@/hooks/useRideManagement";
 import { PassengerHome } from "@/components/passenger/PassengerHome";
 import { DriverHome } from "@/components/driver/DriverHome";
 import { useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const {
