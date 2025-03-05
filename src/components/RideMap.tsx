@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import type { Ride } from "@/types/database";
@@ -42,10 +41,13 @@ export function RideMap({
   const [searchValue, setSearchValue] = useState("");
   const [mapError, setMapError] = useState<string | null>(null);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const [routeDisplayed, setRouteDisplayed] = useState(false);
 
-  // Função para atualizar a rota dinâmica entre o motorista e o destino
   const updateDynamicRoute = useCallback(() => {
-    if (!ride || !driverLocation || !mapInstanceRef.current || !directionsServiceRef.current) return;
+    if (!ride || !driverLocation || !mapInstanceRef.current || !directionsServiceRef.current) {
+      console.log("Missing requirements for dynamic route update");
+      return;
+    }
     
     const driverPosition = {
       lat: driverLocation.latitude, 
@@ -57,20 +59,20 @@ export function RideMap({
       lng: ride.destination_longitude
     };
     
-    // Cria um renderer para a rota dinâmica se ainda não existir
+    console.log("Updating dynamic route from driver to destination:", driverPosition, destinationPosition);
+    
     if (!dynamicRouteRendererRef.current) {
       dynamicRouteRendererRef.current = new google.maps.DirectionsRenderer({
         map: mapInstanceRef.current,
         suppressMarkers: true,
         polylineOptions: {
-          strokeColor: "#10b981", // Cor verde para a rota dinâmica
+          strokeColor: "#10b981",
           strokeWeight: 5,
           strokeOpacity: 0.7
         }
       });
     }
     
-    // Calcula a rota entre a posição atual do motorista e o destino
     directionsServiceRef.current.route(
       {
         origin: driverPosition,
@@ -80,7 +82,7 @@ export function RideMap({
       (result, status) => {
         if (status === "OK" && result) {
           dynamicRouteRendererRef.current!.setDirections(result);
-          console.log("Dynamic route updated");
+          console.log("Dynamic route updated successfully");
         } else {
           console.warn("Failed to get dynamic directions:", status);
         }
@@ -88,12 +90,90 @@ export function RideMap({
     );
   }, [ride, driverLocation]);
 
-  // Atualiza a rota dinâmica quando a localização do motorista muda
   useEffect(() => {
     if (showDriverToDestinationRoute && driverLocation) {
       updateDynamicRoute();
     }
   }, [driverLocation, showDriverToDestinationRoute, updateDynamicRoute]);
+
+  const createStaticRoute = useCallback(() => {
+    if (!ride || !mapInstanceRef.current || !directionsServiceRef.current || routeDisplayed) return;
+    
+    const pickupLocation = {
+      lat: ride.pickup_latitude,
+      lng: ride.pickup_longitude,
+    };
+
+    const destinationLocation = {
+      lat: ride.destination_latitude,
+      lng: ride.destination_longitude,
+    };
+    
+    console.log("Creating static route from pickup to destination:", pickupLocation, destinationLocation);
+
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+    }
+
+    const directionsRenderer = new google.maps.DirectionsRenderer({
+      map: mapInstanceRef.current,
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: "#4f46e5",
+        strokeWeight: 5,
+        strokeOpacity: 0.7
+      }
+    });
+
+    directionsRendererRef.current = directionsRenderer;
+
+    new google.maps.Marker({
+      position: pickupLocation,
+      map: mapInstanceRef.current,
+      title: "Ponto de partida",
+      icon: {
+        url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+      },
+    });
+
+    new google.maps.Marker({
+      position: destinationLocation,
+      map: mapInstanceRef.current,
+      title: "Destino",
+      icon: {
+        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+      },
+    });
+
+    directionsServiceRef.current.route(
+      {
+        origin: pickupLocation,
+        destination: destinationLocation,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === "OK" && result) {
+          directionsRenderer.setDirections(result);
+          console.log("Directions rendered successfully");
+          setRouteDisplayed(true);
+        } else {
+          console.warn("Failed to get directions:", status);
+          
+          const path = new google.maps.Polyline({
+            path: [pickupLocation, destinationLocation],
+            geodesic: true,
+            strokeColor: "#4f46e5",
+            strokeOpacity: 0.7,
+            strokeWeight: 5,
+          });
+          
+          path.setMap(mapInstanceRef.current);
+          console.log("Created direct polyline as fallback");
+          setRouteDisplayed(true);
+        }
+      }
+    );
+  }, [ride, routeDisplayed]);
 
   useEffect(() => {
     async function initMap() {
@@ -101,11 +181,8 @@ export function RideMap({
         setIsLoading(true);
         console.log("Starting map initialization...");
         
-        // Clear any previous errors
         setMapError(null);
         
-        // Get the Google Maps API key from Supabase Functions
-        console.log("Fetching Google Maps API key...");
         const { data, error } = await supabase.functions.invoke('get-maps-key');
         
         if (error) {
@@ -121,14 +198,12 @@ export function RideMap({
         const GOOGLE_MAPS_API_KEY = data.GOOGLE_MAPS_API_KEY;
         console.log("API key retrieved, loading Google Maps...");
         
-        // Initialize the Google Maps loader
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: "weekly",
           libraries: ["places"],
         });
 
-        // Load the Google Maps API
         const google = await loader.load();
         console.log("Google Maps API loaded successfully");
         
@@ -137,13 +212,11 @@ export function RideMap({
           return;
         }
 
-        // Default center (use ride pickup location if available, otherwise use a default location)
         const defaultCenter = ride ? {
           lat: ride.pickup_latitude,
           lng: ride.pickup_longitude,
-        } : initialLocation || { lat: -23.55, lng: -46.63 }; // São Paulo as default
+        } : initialLocation || { lat: -23.55, lng: -46.63 };
 
-        // Create the map
         console.log("Creating map with center:", defaultCenter);
         const map = new google.maps.Map(mapRef.current, {
           center: defaultCenter,
@@ -159,16 +232,12 @@ export function RideMap({
 
         mapInstanceRef.current = map;
         
-        // Initialize direction service
         directionsServiceRef.current = new google.maps.DirectionsService();
         
-        // Initialize geocoder
         setGeocoder(new google.maps.Geocoder());
         console.log("Geocoder initialized");
 
-        // Create searchbox for location search
         if (selectionMode) {
-          // Initialize autocomplete
           const input = document.getElementById("map-search-input") as HTMLInputElement;
           if (input) {
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -207,7 +276,6 @@ export function RideMap({
             console.warn("Search input element not found");
           }
           
-          // If in selection mode, allow clicking on the map to set a marker
           map.addListener("click", (e: google.maps.MapMouseEvent) => {
             if (currentMarker) {
               currentMarker.setMap(null);
@@ -226,7 +294,6 @@ export function RideMap({
             
             setCurrentMarker(marker);
             
-            // Get address from coordinates
             if (geocoder) {
               geocoder.geocode({ location: position }, (results, status) => {
                 if (status === "OK" && results && results[0]) {
@@ -246,7 +313,6 @@ export function RideMap({
           console.log("Map click listener added");
         }
 
-        // If initialLocation exists and we're in selection mode, place a marker
         if (initialLocation && selectionMode) {
           const marker = new google.maps.Marker({
             position: initialLocation,
@@ -262,69 +328,12 @@ export function RideMap({
           console.log("Initial marker placed at:", initialLocation);
         }
 
-        // If we have a ride and showRoute is true, show the route
         if (ride && showRoute) {
-          const pickupLocation = {
-            lat: ride.pickup_latitude,
-            lng: ride.pickup_longitude,
-          };
-
-          const destinationLocation = {
-            lat: ride.destination_latitude,
-            lng: ride.destination_longitude,
-          };
-
-          const directionsRenderer = new google.maps.DirectionsRenderer({
-            map,
-            suppressMarkers: true,
-            polylineOptions: {
-              strokeColor: "#4f46e5",
-              strokeWeight: 5,
-              strokeOpacity: 0.7
-            }
-          });
-
-          directionsRendererRef.current = directionsRenderer;
-
-          const pickupMarker = new google.maps.Marker({
-            position: pickupLocation,
-            map,
-            title: "Ponto de partida",
-            icon: {
-              url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-            },
-          });
-
-          const destinationMarker = new google.maps.Marker({
-            position: destinationLocation,
-            map,
-            title: "Destino",
-            icon: {
-              url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-            },
-          });
-
-          directionsServiceRef.current.route(
-            {
-              origin: pickupLocation,
-              destination: destinationLocation,
-              travelMode: google.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-              if (status === "OK" && result) {
-                directionsRenderer.setDirections(result);
-                console.log("Directions rendered successfully");
-              } else {
-                console.warn("Failed to get directions:", status);
-              }
-            }
-          );
+          createStaticRoute();
         }
         
-        // If we're in tracking mode, set up driver and passenger markers
         if (trackingMode) {
           if (driverLocation) {
-            // Create or update driver marker
             if (driverMarkerRef.current) {
               driverMarkerRef.current.setPosition({
                 lat: driverLocation.latitude,
@@ -346,7 +355,6 @@ export function RideMap({
           }
           
           if (passengerLocation) {
-            // Create or update passenger marker
             if (passengerMarkerRef.current) {
               passengerMarkerRef.current.setPosition({
                 lat: passengerLocation.latitude,
@@ -367,7 +375,6 @@ export function RideMap({
             }
           }
           
-          // Se precisamos mostrar a rota entre o motorista e o destino
           if (showDriverToDestinationRoute && driverLocation) {
             updateDynamicRoute();
           }
@@ -406,9 +413,8 @@ export function RideMap({
         passengerMarkerRef.current.setMap(null);
       }
     };
-  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute]);
+  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute, createStaticRoute]);
 
-  // Update driver and passenger markers when their locations change
   useEffect(() => {
     if (!mapInstanceRef.current || !trackingMode) return;
     
@@ -431,7 +437,6 @@ export function RideMap({
         });
       }
       
-      // Center map on driver if it exists
       if (mapInstanceRef.current) {
         mapInstanceRef.current.panTo(position);
       }
@@ -471,12 +476,10 @@ export function RideMap({
             mapInstanceRef.current.setCenter(location);
             mapInstanceRef.current.setZoom(17);
             
-            // Remove previous marker if exists
             if (currentMarker) {
               currentMarker.setMap(null);
             }
             
-            // Create new marker at current location
             const marker = new google.maps.Marker({
               position: location,
               map: mapInstanceRef.current,
@@ -489,7 +492,6 @@ export function RideMap({
             
             setCurrentMarker(marker);
             
-            // Get address from coordinates if in selection mode
             if (selectionMode && geocoder) {
               geocoder.geocode({ location }, (results, status) => {
                 if (status === "OK" && results && results[0]) {

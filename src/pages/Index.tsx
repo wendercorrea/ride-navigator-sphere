@@ -2,6 +2,7 @@
 import { useRideManagement } from "@/hooks/useRideManagement";
 import { PassengerHome } from "@/components/passenger/PassengerHome";
 import { DriverHome } from "@/components/driver/DriverHome";
+import { useEffect } from "react";
 
 const Index = () => {
   const {
@@ -20,6 +21,45 @@ const Index = () => {
     updatePickupWithCoords,
     updateDestinationWithCoords,
   } = useRideManagement();
+
+  useEffect(() => {
+    // Verifica se as APIs necessárias estão habilitadas no projeto do Google Maps
+    const checkApiValidity = async () => {
+      try {
+        const directionsService = new google.maps.DirectionsService();
+        const testRequest = {
+          origin: { lat: -23.55, lng: -46.63 }, // São Paulo
+          destination: { lat: -23.56, lng: -46.64 }, // Próximo a São Paulo
+          travelMode: google.maps.TravelMode.DRIVING,
+        };
+        
+        directionsService.route(testRequest, (result, status) => {
+          if (status !== "OK") {
+            console.warn(`Directions API test failed: ${status}. Please ensure Directions API is enabled in your Google Cloud Console.`);
+          } else {
+            console.log("Directions API is properly configured and working.");
+          }
+        });
+      } catch (error) {
+        console.error("Error testing Google Maps APIs:", error);
+      }
+    };
+    
+    // Executa o teste quando a API do Google Maps estiver carregada
+    if (window.google && window.google.maps) {
+      checkApiValidity();
+    } else {
+      const checkGoogleMaps = setInterval(() => {
+        if (window.google && window.google.maps) {
+          checkApiValidity();
+          clearInterval(checkGoogleMaps);
+        }
+      }, 1000);
+      
+      // Limpa o intervalo após 10 segundos para evitar vazamentos de memória
+      setTimeout(() => clearInterval(checkGoogleMaps), 10000);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-secondary to-background">
