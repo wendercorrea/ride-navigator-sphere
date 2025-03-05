@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
@@ -15,7 +15,7 @@ export interface LocationUpdate {
 export function useLocationTracking(rideId?: string) {
   const { user } = useAuth();
   const [isTracking, setIsTracking] = useState(false);
-  const [locationUpdateInterval, setLocationUpdateInterval] = useState<NodeJS.Timeout | null>(null);
+  const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [partnerLocation, setPartnerLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isDriver, setIsDriver] = useState<boolean | null>(null);
@@ -160,9 +160,9 @@ export function useLocationTracking(rideId?: string) {
     // Update location immediately
     trackLocation();
     
-    // Set up interval for regular updates
-    const interval = setInterval(trackLocation, 10000); // Update every 10 seconds
-    setLocationUpdateInterval(interval);
+    // Set up interval for regular updates - agora a cada 5 segundos para atualizações mais frequentes
+    const interval = setInterval(trackLocation, 5000);
+    locationUpdateIntervalRef.current = interval;
     
     return () => {
       if (interval) clearInterval(interval);
@@ -173,23 +173,23 @@ export function useLocationTracking(rideId?: string) {
   const stopTracking = useCallback(() => {
     if (!isTracking) return;
     
-    if (locationUpdateInterval) {
-      clearInterval(locationUpdateInterval);
-      setLocationUpdateInterval(null);
+    if (locationUpdateIntervalRef.current) {
+      clearInterval(locationUpdateIntervalRef.current);
+      locationUpdateIntervalRef.current = null;
     }
     
     setIsTracking(false);
     console.log('Location tracking stopped');
-  }, [isTracking, locationUpdateInterval]);
+  }, [isTracking]);
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      if (locationUpdateInterval) {
-        clearInterval(locationUpdateInterval);
+      if (locationUpdateIntervalRef.current) {
+        clearInterval(locationUpdateIntervalRef.current);
       }
     };
-  }, [locationUpdateInterval]);
+  }, []);
 
   return {
     isTracking,

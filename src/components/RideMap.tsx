@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import type { Ride } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ interface RideMapProps {
   passengerLocation?: { latitude: number, longitude: number } | null;
   showRoute?: boolean;
   trackingMode?: boolean;
+  showDriverToDestinationRoute?: boolean;
 }
 
 export function RideMap({ 
@@ -26,11 +27,13 @@ export function RideMap({
   driverLocation = null,
   passengerLocation = null,
   showRoute = true,
-  trackingMode = false
+  trackingMode = false,
+  showDriverToDestinationRoute = false
 }: RideMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const dynamicRouteRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const [currentMarker, setCurrentMarker] = useState<google.maps.Marker | null>(null);
   const driverMarkerRef = useRef<google.maps.Marker | null>(null);
   const passengerMarkerRef = useRef<google.maps.Marker | null>(null);
@@ -38,6 +41,59 @@ export function RideMap({
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [mapError, setMapError] = useState<string | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+
+  // Função para atualizar a rota dinâmica entre o motorista e o destino
+  const updateDynamicRoute = useCallback(() => {
+    if (!ride || !driverLocation || !mapInstanceRef.current || !directionsServiceRef.current) return;
+    
+    const driverPosition = {
+      lat: driverLocation.latitude, 
+      lng: driverLocation.longitude
+    };
+    
+    const destinationPosition = {
+      lat: ride.destination_latitude,
+      lng: ride.destination_longitude
+    };
+    
+    // Cria um renderer para a rota dinâmica se ainda não existir
+    if (!dynamicRouteRendererRef.current) {
+      dynamicRouteRendererRef.current = new google.maps.DirectionsRenderer({
+        map: mapInstanceRef.current,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: "#10b981", // Cor verde para a rota dinâmica
+          strokeWeight: 5,
+          strokeOpacity: 0.7
+        }
+      });
+    }
+    
+    // Calcula a rota entre a posição atual do motorista e o destino
+    directionsServiceRef.current.route(
+      {
+        origin: driverPosition,
+        destination: destinationPosition,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === "OK" && result) {
+          dynamicRouteRendererRef.current!.setDirections(result);
+          console.log("Dynamic route updated");
+        } else {
+          console.warn("Failed to get dynamic directions:", status);
+        }
+      }
+    );
+  }, [ride, driverLocation]);
+
+  // Atualiza a rota dinâmica quando a localização do motorista muda
+  useEffect(() => {
+    if (showDriverToDestinationRoute && driverLocation) {
+      updateDynamicRoute();
+    }
+  }, [driverLocation, showDriverToDestinationRoute, updateDynamicRoute]);
 
   useEffect(() => {
     async function initMap() {
@@ -102,6 +158,9 @@ export function RideMap({
         });
 
         mapInstanceRef.current = map;
+        
+        // Initialize direction service
+        directionsServiceRef.current = new google.maps.DirectionsService();
         
         // Initialize geocoder
         setGeocoder(new google.maps.Geocoder());
@@ -215,7 +274,6 @@ export function RideMap({
             lng: ride.destination_longitude,
           };
 
-          const directionsService = new google.maps.DirectionsService();
           const directionsRenderer = new google.maps.DirectionsRenderer({
             map,
             suppressMarkers: true,
@@ -246,7 +304,7 @@ export function RideMap({
             },
           });
 
-          directionsService.route(
+          directionsServiceRef.current.route(
             {
               origin: pickupLocation,
               destination: destinationLocation,
@@ -308,6 +366,11 @@ export function RideMap({
               });
             }
           }
+          
+          // Se precisamos mostrar a rota entre o motorista e o destino
+          if (showDriverToDestinationRoute && driverLocation) {
+            updateDynamicRoute();
+          }
         }
         
         console.log("Map initialization completed successfully");
@@ -330,6 +393,9 @@ export function RideMap({
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setMap(null);
       }
+      if (dynamicRouteRendererRef.current) {
+        dynamicRouteRendererRef.current.setMap(null);
+      }
       if (currentMarker) {
         currentMarker.setMap(null);
       }
@@ -340,7 +406,7 @@ export function RideMap({
         passengerMarkerRef.current.setMap(null);
       }
     };
-  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute]);
+  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute]);
 
   // Update driver and passenger markers when their locations change
   useEffect(() => {
@@ -519,6 +585,12 @@ export function RideMap({
             <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
             Passageiro
           </div>
+          {showDriverToDestinationRoute && (
+            <div className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+              Rota Ativa
+            </div>
+          )}
         </div>
       )}
     </div>

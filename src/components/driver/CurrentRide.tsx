@@ -163,6 +163,7 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 passengerLocation={partnerLocation}
                 trackingMode={true}
                 showRoute={true}
+                showDriverToDestinationRoute={true}
               />
             </div>
           </div>
@@ -211,7 +212,7 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                     </span>
                   </div>
                   <p className="text-xs text-blue-600">
-                    Você e o passageiro estão sendo rastreados no mapa
+                    Rota ativa até o destino
                   </p>
                 </div>
               )}
@@ -242,6 +243,7 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 passengerLocation={partnerLocation}
                 trackingMode={true}
                 showRoute={true}
+                showDriverToDestinationRoute={true}
               />
             </div>
           </div>
