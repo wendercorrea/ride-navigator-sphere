@@ -40,7 +40,8 @@ const Index = () => {
             toast({
               title: "Alerta do Google Maps",
               description: "A API de Direções do Google Maps não está configurada corretamente. Algumas funcionalidades de rota podem não funcionar.",
-              variant: "warning",
+              // Fix the variant to use a valid type
+              variant: "destructive",
             });
           } else {
             console.log("Directions API is properly configured and working.");

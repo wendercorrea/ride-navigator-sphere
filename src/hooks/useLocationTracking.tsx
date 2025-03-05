@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -174,8 +173,8 @@ export function useLocationTracking(rideId?: string) {
     const dataInterval = setInterval(trackLocation, 3000);
     locationUpdateIntervalRef.current = dataInterval;
     
-    // Set up separate interval for UI updates (every 15 seconds)
-    const uiInterval = setInterval(updateLocationState, 15000);
+    // Set up separate interval for UI updates (every 30 seconds instead of 15)
+    const uiInterval = setInterval(updateLocationState, 30000);
     mapUpdateIntervalRef.current = uiInterval;
     
     return () => {

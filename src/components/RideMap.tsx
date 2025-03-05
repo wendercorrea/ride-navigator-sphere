@@ -88,29 +88,45 @@ export function RideMap({
         } else {
           console.warn("Failed to get dynamic directions:", status);
           
-          if (mapInstanceRef.current) {
-            if (dynamicRouteRendererRef.current) {
-              dynamicRouteRendererRef.current.setMap(null);
-              dynamicRouteRendererRef.current = null;
-            }
-            
-            const path = new google.maps.Polyline({
-              path: [driverPosition, destinationPosition],
-              geodesic: true,
-              strokeColor: "#10b981",
-              strokeWeight: 5,
-              strokeOpacity: 0.7,
-            });
-            
-            dynamicRouteRendererRef.current = {
-              setMap: (map) => {
-                path.setMap(map);
+          directionsServiceRef.current!.route(
+            {
+              origin: driverPosition,
+              destination: destinationPosition,
+              travelMode: google.maps.TravelMode.DRIVING,
+              avoidHighways: true,
+            },
+            (fallbackResult, fallbackStatus) => {
+              if (fallbackStatus === "OK" && fallbackResult) {
+                dynamicRouteRendererRef.current!.setDirections(fallbackResult);
+                console.log("Dynamic route updated with fallback options");
+              } else {
+                console.warn("All fallback attempts failed, using direct polyline");
+                
+                if (mapInstanceRef.current) {
+                  if (dynamicRouteRendererRef.current) {
+                    dynamicRouteRendererRef.current.setMap(null);
+                    dynamicRouteRendererRef.current = null;
+                  }
+                  
+                  const path = new google.maps.Polyline({
+                    path: [driverPosition, destinationPosition],
+                    geodesic: true,
+                    strokeColor: "#10b981",
+                    strokeWeight: 5,
+                    strokeOpacity: 0.7,
+                  });
+                  
+                  dynamicRouteRendererRef.current = {
+                    setMap: (map) => {
+                      path.setMap(map);
+                    }
+                  } as any;
+                  
+                  path.setMap(mapInstanceRef.current);
+                }
               }
-            } as any;
-            
-            path.setMap(mapInstanceRef.current);
-            console.log("Created direct polyline as fallback for dynamic route");
-          }
+            }
+          );
         }
       }
     );
@@ -182,20 +198,53 @@ export function RideMap({
           directionsRenderer.setDirections(result);
           console.log("Directions rendered successfully");
           setRouteDisplayed(true);
+          
+          if (mapInstanceRef.current && result.routes[0]?.bounds) {
+            mapInstanceRef.current.fitBounds(result.routes[0].bounds);
+          }
         } else {
           console.warn("Failed to get directions:", status);
           
-          const path = new google.maps.Polyline({
-            path: [pickupLocation, destinationLocation],
-            geodesic: true,
-            strokeColor: "#4f46e5",
-            strokeOpacity: 0.7,
-            strokeWeight: 5,
-          });
-          
-          path.setMap(mapInstanceRef.current);
-          console.log("Created direct polyline as fallback");
-          setRouteDisplayed(true);
+          directionsServiceRef.current!.route(
+            {
+              origin: pickupLocation,
+              destination: destinationLocation,
+              travelMode: google.maps.TravelMode.DRIVING,
+              avoidHighways: true,
+            },
+            (fallbackResult, fallbackStatus) => {
+              if (fallbackStatus === "OK" && fallbackResult) {
+                directionsRenderer.setDirections(fallbackResult);
+                console.log("Directions rendered with fallback options");
+                setRouteDisplayed(true);
+                
+                if (mapInstanceRef.current && fallbackResult.routes[0]?.bounds) {
+                  mapInstanceRef.current.fitBounds(fallbackResult.routes[0].bounds);
+                }
+              } else {
+                console.warn("All fallback attempts failed, using direct polyline");
+                
+                const path = new google.maps.Polyline({
+                  path: [pickupLocation, destinationLocation],
+                  geodesic: true,
+                  strokeColor: "#4f46e5",
+                  strokeOpacity: 0.7,
+                  strokeWeight: 5,
+                });
+                
+                path.setMap(mapInstanceRef.current);
+                console.log("Created direct polyline as fallback");
+                setRouteDisplayed(true);
+                
+                if (mapInstanceRef.current) {
+                  const bounds = new google.maps.LatLngBounds()
+                    .extend(pickupLocation)
+                    .extend(destinationLocation);
+                  mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
+                }
+              }
+            }
+          );
         }
       }
     );
@@ -246,7 +295,7 @@ export function RideMap({
         console.log("Creating map with center:", defaultCenter);
         const map = new google.maps.Map(mapRef.current, {
           center: defaultCenter,
-          zoom: 15,
+          zoom: trackingMode ? 13 : 15,
           styles: [
             {
               featureType: "poi",
@@ -378,14 +427,27 @@ export function RideMap({
                 },
               });
             }
+            
+            if (ride && showDriverToDestinationRoute) {
+              const bounds = new google.maps.LatLngBounds()
+                .extend({lat: driverLocation.latitude, lng: driverLocation.longitude})
+                .extend({lat: ride.destination_latitude, lng: ride.destination_longitude});
+              
+              if (passengerLocation && showPassengerLocation) {
+                bounds.extend({lat: passengerLocation.latitude, lng: passengerLocation.longitude});
+              }
+              
+              map.fitBounds(bounds, { padding: 60 });
+            }
           }
           
-          if (passengerLocation) {
+          if (passengerLocation && showPassengerLocation) {
             if (passengerMarkerRef.current) {
               passengerMarkerRef.current.setPosition({
                 lat: passengerLocation.latitude,
                 lng: passengerLocation.longitude
               });
+              passengerMarkerRef.current.setVisible(true);
             } else {
               passengerMarkerRef.current = new google.maps.Marker({
                 position: {
@@ -399,6 +461,8 @@ export function RideMap({
                 },
               });
             }
+          } else if (passengerMarkerRef.current) {
+            passengerMarkerRef.current.setVisible(false);
           }
           
           if (showDriverToDestinationRoute && driverLocation) {
@@ -439,7 +503,7 @@ export function RideMap({
         passengerMarkerRef.current.setMap(null);
       }
     };
-  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute, createStaticRoute]);
+  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute, createStaticRoute, trackingMode, showPassengerLocation, driverLocation, passengerLocation]);
 
   useEffect(() => {
     if (!mapInstanceRef.current || !trackingMode) return;
@@ -463,7 +527,13 @@ export function RideMap({
         });
       }
       
-      if (mapInstanceRef.current) {
+      if (mapInstanceRef.current && ride && showDriverToDestinationRoute) {
+        const bounds = new google.maps.LatLngBounds()
+          .extend(position)
+          .extend({lat: ride.destination_latitude, lng: ride.destination_longitude});
+        
+        mapInstanceRef.current.fitBounds(bounds, { padding: 60 });
+      } else if (mapInstanceRef.current) {
         mapInstanceRef.current.panTo(position);
       }
     }
@@ -490,7 +560,7 @@ export function RideMap({
     } else if (passengerMarkerRef.current) {
       passengerMarkerRef.current.setVisible(false);
     }
-  }, [driverLocation, passengerLocation, trackingMode, showPassengerLocation]);
+  }, [driverLocation, passengerLocation, trackingMode, showPassengerLocation, ride, showDriverToDestinationRoute]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
