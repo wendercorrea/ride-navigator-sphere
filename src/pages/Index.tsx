@@ -35,7 +35,12 @@ const Index = () => {
         
         directionsService.route(testRequest, (result, status) => {
           if (status !== "OK") {
-            console.warn(`Directions API test failed: ${status}. Please ensure Directions API is enabled in your Google Cloud Console.`);
+            console.warn(`Directions API test failed: ${status}. Por favor, certifique-se de que a API de Direções está habilitada no Google Cloud Console.`);
+            toast({
+              title: "Alerta do Google Maps",
+              description: "A API de Direções do Google Maps não está configurada corretamente. Algumas funcionalidades de rota podem não funcionar.",
+              variant: "warning",
+            });
           } else {
             console.log("Directions API is properly configured and working.");
           }

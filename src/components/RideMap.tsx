@@ -16,6 +16,7 @@ interface RideMapProps {
   showRoute?: boolean;
   trackingMode?: boolean;
   showDriverToDestinationRoute?: boolean;
+  showPassengerLocation?: boolean;
 }
 
 export function RideMap({ 
@@ -27,7 +28,8 @@ export function RideMap({
   passengerLocation = null,
   showRoute = true,
   trackingMode = false,
-  showDriverToDestinationRoute = false
+  showDriverToDestinationRoute = false,
+  showPassengerLocation = true
 }: RideMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -85,6 +87,30 @@ export function RideMap({
           console.log("Dynamic route updated successfully");
         } else {
           console.warn("Failed to get dynamic directions:", status);
+          
+          if (mapInstanceRef.current) {
+            if (dynamicRouteRendererRef.current) {
+              dynamicRouteRendererRef.current.setMap(null);
+              dynamicRouteRendererRef.current = null;
+            }
+            
+            const path = new google.maps.Polyline({
+              path: [driverPosition, destinationPosition],
+              geodesic: true,
+              strokeColor: "#10b981",
+              strokeWeight: 5,
+              strokeOpacity: 0.7,
+            });
+            
+            dynamicRouteRendererRef.current = {
+              setMap: (map) => {
+                path.setMap(map);
+              }
+            } as any;
+            
+            path.setMap(mapInstanceRef.current);
+            console.log("Created direct polyline as fallback for dynamic route");
+          }
         }
       }
     );
@@ -442,7 +468,7 @@ export function RideMap({
       }
     }
     
-    if (passengerLocation && passengerLocation.latitude && passengerLocation.longitude) {
+    if (passengerLocation && passengerLocation.latitude && passengerLocation.longitude && showPassengerLocation) {
       const position = {
         lat: passengerLocation.latitude,
         lng: passengerLocation.longitude
@@ -450,6 +476,7 @@ export function RideMap({
       
       if (passengerMarkerRef.current) {
         passengerMarkerRef.current.setPosition(position);
+        passengerMarkerRef.current.setVisible(true);
       } else {
         passengerMarkerRef.current = new google.maps.Marker({
           position,
@@ -460,8 +487,10 @@ export function RideMap({
           },
         });
       }
+    } else if (passengerMarkerRef.current) {
+      passengerMarkerRef.current.setVisible(false);
     }
-  }, [driverLocation, passengerLocation, trackingMode]);
+  }, [driverLocation, passengerLocation, trackingMode, showPassengerLocation]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -583,10 +612,12 @@ export function RideMap({
             <div className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse"></div>
             Motorista
           </div>
-          <div className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
-            Passageiro
-          </div>
+          {showPassengerLocation && (
+            <div className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
+              Passageiro
+            </div>
+          )}
           {showDriverToDestinationRoute && (
             <div className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>

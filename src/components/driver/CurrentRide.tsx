@@ -1,4 +1,3 @@
-
 import { PendingRide } from "@/components/PendingRide";
 import type { Ride } from "@/types/database";
 import { useRideDriver } from "@/hooks/ride/useRideDriver";
@@ -123,7 +122,7 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
-              {/* Status de localização em tempo real */}
+              {/* Status de localização em tempo real - agora exibe a localização do passageiro */}
               {partnerLocation && (
                 <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
@@ -133,7 +132,7 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                     </span>
                   </div>
                   <p className="text-xs text-green-600">
-                    A localização atual do passageiro está visível no mapa
+                    Dirija-se ao ponto de embarque
                   </p>
                 </div>
               )}
@@ -163,7 +162,8 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 passengerLocation={partnerLocation}
                 trackingMode={true}
                 showRoute={true}
-                showDriverToDestinationRoute={true}
+                showDriverToDestinationRoute={false}
+                showPassengerLocation={true}
               />
             </div>
           </div>
@@ -202,20 +202,18 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
-              {/* Status de localização em tempo real */}
-              {partnerLocation && (
-                <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Navigation className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700">
-                      Navegação em tempo real
-                    </span>
-                  </div>
-                  <p className="text-xs text-blue-600">
-                    Rota ativa até o destino
-                  </p>
+              {/* Agora exibe informação sobre a rota ativa */}
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Navigation className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700">
+                    Navegação em tempo real
+                  </span>
                 </div>
-              )}
+                <p className="text-xs text-blue-600">
+                  Rota ativa até o destino
+                </p>
+              </div>
               
               <Button 
                 onClick={handleCompleteRide} 
@@ -244,6 +242,7 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 trackingMode={true}
                 showRoute={true}
                 showDriverToDestinationRoute={true}
+                showPassengerLocation={false}
               />
             </div>
           </div>

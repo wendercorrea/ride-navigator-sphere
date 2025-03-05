@@ -116,6 +116,10 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
     }
   };
 
+  // Determine appropriate map display based on user role and ride status
+  const showPassengerLocation = isDriver && ride.status === 'pending';
+  const showDriverToDestinationRoute = ride.status === 'in_progress';
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -187,8 +191,8 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
               </div>
             )}
 
-            {/* Status de localização em tempo real */}
-            {ride.status === 'accepted' && partnerLocation && (
+            {/* Status de localização em tempo real - adaptado para os diferentes estados */}
+            {ride.status === 'accepted' && partnerLocation && !isDriver && (
               <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Navigation className="w-4 h-4 text-green-600" />
@@ -270,10 +274,12 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
           <div className="h-[400px] md:h-full relative rounded-lg overflow-hidden">
             <RideMap 
               ride={ride} 
-              driverLocation={partnerLocation && isDriver ? null : partnerLocation}
-              passengerLocation={!isDriver ? currentLocation : null}
+              driverLocation={!isDriver ? partnerLocation : currentLocation}
+              passengerLocation={!isDriver ? currentLocation : partnerLocation}
               trackingMode={true}
               showRoute={true}
+              showDriverToDestinationRoute={showDriverToDestinationRoute}
+              showPassengerLocation={showPassengerLocation}
             />
           </div>
         </div>
