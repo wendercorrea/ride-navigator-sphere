@@ -1,4 +1,3 @@
-
 import { useRideManagement } from "@/hooks/useRideManagement";
 import { PassengerHome } from "@/components/passenger/PassengerHome";
 import { DriverHome } from "@/components/driver/DriverHome";
@@ -40,7 +39,6 @@ const Index = () => {
             toast({
               title: "Alerta do Google Maps",
               description: "A API de Direções do Google Maps não está configurada corretamente. Algumas funcionalidades de rota podem não funcionar.",
-              // Fix the variant to use a valid type
               variant: "destructive",
             });
           } else {

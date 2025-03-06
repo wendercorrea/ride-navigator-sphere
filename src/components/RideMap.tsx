@@ -1,4 +1,4 @@
-
+<lov-codelov-code>
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import type { Ride } from "@/types/database";
@@ -45,6 +45,7 @@ export function RideMap({
   const [mapError, setMapError] = useState<string | null>(null);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const [routeDisplayed, setRouteDisplayed] = useState(false);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
   const updateDynamicRoute = useCallback(() => {
     if (!ride || !driverLocation || !mapInstanceRef.current || !directionsServiceRef.current) {
@@ -133,11 +134,96 @@ export function RideMap({
     );
   }, [ride, driverLocation]);
 
+  // This effect runs when driverLocation or passengerLocation changes
+  // to update markers without reloading the map
   useEffect(() => {
-    if (showDriverToDestinationRoute && driverLocation) {
+    if (!mapInitialized || !mapInstanceRef.current) return;
+    
+    if (driverLocation && driverLocation.latitude && driverLocation.longitude) {
+      const position = {
+        lat: driverLocation.latitude,
+        lng: driverLocation.longitude
+      };
+      
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setPosition(position);
+      } else if (mapInstanceRef.current) {
+        driverMarkerRef.current = new google.maps.Marker({
+          position,
+          map: mapInstanceRef.current,
+          title: "Motorista",
+          icon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          },
+        });
+      }
+    }
+    
+    if (passengerLocation && passengerLocation.latitude && passengerLocation.longitude && showPassengerLocation) {
+      const position = {
+        lat: passengerLocation.latitude,
+        lng: passengerLocation.longitude
+      };
+      
+      if (passengerMarkerRef.current) {
+        passengerMarkerRef.current.setPosition(position);
+        passengerMarkerRef.current.setVisible(true);
+      } else if (mapInstanceRef.current) {
+        passengerMarkerRef.current = new google.maps.Marker({
+          position,
+          map: mapInstanceRef.current,
+          title: "Passageiro",
+          icon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+          },
+        });
+      }
+    } else if (passengerMarkerRef.current) {
+      passengerMarkerRef.current.setVisible(false);
+    }
+    
+    if (showDriverToDestinationRoute && driverLocation && ride) {
       updateDynamicRoute();
     }
-  }, [driverLocation, showDriverToDestinationRoute, updateDynamicRoute]);
+    
+    // Update map bounds to fit all markers if tracking
+    if (trackingMode && mapInstanceRef.current && ride) {
+      const bounds = new google.maps.LatLngBounds();
+      
+      if (driverLocation) {
+        bounds.extend({
+          lat: driverLocation.latitude, 
+          lng: driverLocation.longitude
+        });
+      }
+      
+      if (ride) {
+        bounds.extend({
+          lat: ride.destination_latitude, 
+          lng: ride.destination_longitude
+        });
+      }
+      
+      if (passengerLocation && showPassengerLocation) {
+        bounds.extend({
+          lat: passengerLocation.latitude, 
+          lng: passengerLocation.longitude
+        });
+      }
+      
+      if (bounds.isEmpty()) return;
+      
+      // Only fit bounds if there are significant changes to avoid constant zooming
+      if (driverLocation) {
+        mapInstanceRef.current.fitBounds(bounds, {
+          top: 60, 
+          right: 60, 
+          bottom: 60, 
+          left: 60
+        });
+      }
+    }
+  }, [driverLocation, passengerLocation, showPassengerLocation, mapInitialized, ride, showDriverToDestinationRoute, trackingMode, updateDynamicRoute]);
 
   const createStaticRoute = useCallback(() => {
     if (!ride || !mapInstanceRef.current || !directionsServiceRef.current || routeDisplayed) return;
@@ -201,7 +287,12 @@ export function RideMap({
           setRouteDisplayed(true);
           
           if (mapInstanceRef.current && result.routes[0]?.bounds) {
-            mapInstanceRef.current.fitBounds(result.routes[0].bounds);
+            mapInstanceRef.current.fitBounds(result.routes[0].bounds, {
+              top: 50, 
+              right: 50, 
+              bottom: 50, 
+              left: 50
+            });
           }
         } else {
           console.warn("Failed to get directions:", status);
@@ -220,7 +311,12 @@ export function RideMap({
                 setRouteDisplayed(true);
                 
                 if (mapInstanceRef.current && fallbackResult.routes[0]?.bounds) {
-                  mapInstanceRef.current.fitBounds(fallbackResult.routes[0].bounds);
+                  mapInstanceRef.current.fitBounds(fallbackResult.routes[0].bounds, {
+                    top: 50, 
+                    right: 50, 
+                    bottom: 50, 
+                    left: 50
+                  });
                 }
               } else {
                 console.warn("All fallback attempts failed, using direct polyline");
@@ -242,9 +338,12 @@ export function RideMap({
                     .extend(pickupLocation)
                     .extend(destinationLocation);
                   
-                  // Fix: Use proper padding type
-                  const padding = { top: 50, right: 50, bottom: 50, left: 50 };
-                  mapInstanceRef.current.fitBounds(bounds, padding);
+                  mapInstanceRef.current.fitBounds(bounds, {
+                    top: 50, 
+                    right: 50, 
+                    bottom: 50, 
+                    left: 50
+                  });
                 }
               }
             }
@@ -413,24 +512,17 @@ export function RideMap({
         
         if (trackingMode) {
           if (driverLocation) {
-            if (driverMarkerRef.current) {
-              driverMarkerRef.current.setPosition({
+            driverMarkerRef.current = new google.maps.Marker({
+              position: {
                 lat: driverLocation.latitude,
                 lng: driverLocation.longitude
-              });
-            } else {
-              driverMarkerRef.current = new google.maps.Marker({
-                position: {
-                  lat: driverLocation.latitude,
-                  lng: driverLocation.longitude
-                },
-                map,
-                title: "Motorista",
-                icon: {
-                  url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                },
-              });
-            }
+              },
+              map,
+              title: "Motorista",
+              icon: {
+                url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+              },
+            });
             
             if (ride && showDriverToDestinationRoute) {
               const bounds = new google.maps.LatLngBounds()
@@ -441,34 +533,27 @@ export function RideMap({
                 bounds.extend({lat: passengerLocation.latitude, lng: passengerLocation.longitude});
               }
               
-              // Fix: Use proper padding type
-              const padding = { top: 60, right: 60, bottom: 60, left: 60 };
-              map.fitBounds(bounds, padding);
+              map.fitBounds(bounds, {
+                top: 60, 
+                right: 60, 
+                bottom: 60, 
+                left: 60
+              });
             }
           }
           
           if (passengerLocation && showPassengerLocation) {
-            if (passengerMarkerRef.current) {
-              passengerMarkerRef.current.setPosition({
+            passengerMarkerRef.current = new google.maps.Marker({
+              position: {
                 lat: passengerLocation.latitude,
                 lng: passengerLocation.longitude
-              });
-              passengerMarkerRef.current.setVisible(true);
-            } else {
-              passengerMarkerRef.current = new google.maps.Marker({
-                position: {
-                  lat: passengerLocation.latitude,
-                  lng: passengerLocation.longitude
-                },
-                map,
-                title: "Passageiro",
-                icon: {
-                  url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-                },
-              });
-            }
-          } else if (passengerMarkerRef.current) {
-            passengerMarkerRef.current.setVisible(false);
+              },
+              map,
+              title: "Passageiro",
+              icon: {
+                url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+              },
+            });
           }
           
           if (showDriverToDestinationRoute && driverLocation) {
@@ -476,6 +561,7 @@ export function RideMap({
           }
         }
         
+        setMapInitialized(true);
         console.log("Map initialization completed successfully");
       } catch (error) {
         console.error("Error loading map:", error);
@@ -509,66 +595,7 @@ export function RideMap({
         passengerMarkerRef.current.setMap(null);
       }
     };
-  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute, createStaticRoute, trackingMode, showPassengerLocation, driverLocation, passengerLocation]);
-
-  useEffect(() => {
-    if (!mapInstanceRef.current || !trackingMode) return;
-    
-    if (driverLocation && driverLocation.latitude && driverLocation.longitude) {
-      const position = {
-        lat: driverLocation.latitude,
-        lng: driverLocation.longitude
-      };
-      
-      if (driverMarkerRef.current) {
-        driverMarkerRef.current.setPosition(position);
-      } else {
-        driverMarkerRef.current = new google.maps.Marker({
-          position,
-          map: mapInstanceRef.current,
-          title: "Motorista",
-          icon: {
-            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-          },
-        });
-      }
-      
-      if (mapInstanceRef.current && ride && showDriverToDestinationRoute) {
-        const bounds = new google.maps.LatLngBounds()
-          .extend(position)
-          .extend({lat: ride.destination_latitude, lng: ride.destination_longitude});
-        
-        // Fix: Use proper padding type
-        const padding = { top: 60, right: 60, bottom: 60, left: 60 };
-        mapInstanceRef.current.fitBounds(bounds, padding);
-      } else if (mapInstanceRef.current) {
-        mapInstanceRef.current.panTo(position);
-      }
-    }
-    
-    if (passengerLocation && passengerLocation.latitude && passengerLocation.longitude && showPassengerLocation) {
-      const position = {
-        lat: passengerLocation.latitude,
-        lng: passengerLocation.longitude
-      };
-      
-      if (passengerMarkerRef.current) {
-        passengerMarkerRef.current.setPosition(position);
-        passengerMarkerRef.current.setVisible(true);
-      } else {
-        passengerMarkerRef.current = new google.maps.Marker({
-          position,
-          map: mapInstanceRef.current,
-          title: "Passageiro",
-          icon: {
-            url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-          },
-        });
-      }
-    } else if (passengerMarkerRef.current) {
-      passengerMarkerRef.current.setVisible(false);
-    }
-  }, [driverLocation, passengerLocation, trackingMode, showPassengerLocation, ride, showDriverToDestinationRoute]);
+  }, [ride, selectionMode, onLocationSelect, initialLocation, showRoute, updateDynamicRoute, createStaticRoute, trackingMode, showPassengerLocation, showDriverToDestinationRoute]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -707,3 +734,4 @@ export function RideMap({
     </div>
   );
 }
+</lov-code>
