@@ -3,7 +3,7 @@ import type { Ride } from "@/types/database";
 import { useRideDriver } from "@/hooks/ride/useRideDriver";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; 
-import { CheckCircle, Loader2, Play, User, Car, MapPin, Navigation } from "lucide-react";
+import { CheckCircle, Loader2, Play, User, Car, MapPin, Navigation, ArrowRight } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -122,18 +122,19 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
-              {/* Status de localização em tempo real - agora exibe a localização do passageiro */}
+              {/* Status de deslocamento do motorista para o passageiro */}
               {partnerLocation && (
                 <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Navigation className="w-4 h-4 text-green-600" />
+                    <Car className="w-4 h-4 text-green-600" />
                     <span className="text-sm font-medium text-green-700">
-                      Localização do passageiro
+                      Deslocando para o passageiro
                     </span>
                   </div>
-                  <p className="text-xs text-green-600">
-                    Dirija-se ao ponto de embarque
-                  </p>
+                  <div className="flex items-center text-xs text-green-600 mt-1">
+                    <ArrowRight className="w-3 h-3 mr-1 text-green-500" />
+                    <span>Use o mapa para navegar até o ponto de embarque</span>
+                  </div>
                 </div>
               )}
               

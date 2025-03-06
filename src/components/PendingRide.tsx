@@ -1,7 +1,6 @@
-
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle, Car, Navigation } from "lucide-react";
+import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle, Car, Navigation, ArrowRight } from "lucide-react";
 import { RideMap } from "@/components/RideMap";
 import type { Ride } from "@/types/database";
 import { format } from "date-fns";
@@ -42,7 +41,6 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
     isTracking,
   } = useLocationTracking(ride.id);
   
-  // Start location tracking when the component mounts
   useEffect(() => {
     startTracking();
     
@@ -116,7 +114,6 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
     }
   };
 
-  // Determine appropriate map display based on user role and ride status
   const showPassengerLocation = isDriver && ride.status === 'pending';
   const showDriverToDestinationRoute = ride.status === 'in_progress';
 
@@ -128,7 +125,6 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-4">
-            {/* Data e Hora */}
             <div className="flex flex-col space-y-2 p-4 bg-muted rounded-lg">
               <div className="flex items-center space-x-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -144,7 +140,6 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
               </div>
             </div>
 
-            {/* Endereços */}
             <div className="flex items-start space-x-2">
               <MapPin className="w-5 h-5 mt-1 text-green-500" />
               <div>
@@ -172,7 +167,6 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
               <p className="text-lg font-semibold">R$ {ride.estimated_price.toFixed(2)}</p>
             </div>
 
-            {/* Informações do motorista quando a corrida for aceita */}
             {ride.status === 'accepted' && driverInfo && (
               <div className="p-4 bg-muted rounded-lg space-y-2">
                 <div className="flex items-center space-x-2">
@@ -191,22 +185,21 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
               </div>
             )}
 
-            {/* Status de localização em tempo real - adaptado para os diferentes estados */}
             {ride.status === 'accepted' && partnerLocation && !isDriver && (
               <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Navigation className="w-4 h-4 text-green-600" />
+                  <Car className="w-4 h-4 text-green-600" />
                   <span className="text-sm font-medium text-green-700">
                     Motorista a caminho
                   </span>
                 </div>
-                <p className="text-xs text-green-600">
-                  Acompanhe a localização do motorista no mapa
-                </p>
+                <div className="flex items-center text-xs text-green-600 mt-1">
+                  <ArrowRight className="w-3 h-3 mr-1 text-green-500" />
+                  <span>Acompanhe a localização do motorista no mapa</span>
+                </div>
               </div>
             )}
 
-            {/* Botões de ação */}
             <div className="space-y-2">
               {isDriver && ride.status === 'pending' ? (
                 <>

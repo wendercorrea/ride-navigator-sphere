@@ -148,13 +148,19 @@ export function RideMap({
       if (driverMarkerRef.current) {
         driverMarkerRef.current.setPosition(position);
       } else if (mapInstanceRef.current) {
+        // Create a car icon for the driver
+        const carIcon = {
+          url: "https://maps.google.com/mapfiles/ms/icons/cabs.png", // Using a car icon
+          scaledSize: new google.maps.Size(32, 32),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(16, 16)
+        };
+        
         driverMarkerRef.current = new google.maps.Marker({
           position,
           map: mapInstanceRef.current,
           title: "Motorista",
-          icon: {
-            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-          },
+          icon: carIcon
         });
       }
     }
