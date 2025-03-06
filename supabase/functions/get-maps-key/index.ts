@@ -27,8 +27,14 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         GOOGLE_MAPS_API_KEY,
-        // Add placemark flag to enable all features without restriction
-        useWithoutRestrictions: true
+        // Add placemark flag to indicate required APIs
+        requiredApis: [
+          "Maps JavaScript API",
+          "Places API",
+          "Geocoding API",
+          "Directions API"
+        ],
+        apiStatus: "Check that all required APIs are enabled in the Google Cloud Console"
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -41,7 +47,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || "Failed to retrieve Google Maps API key",
-        hint: "Make sure the GOOGLE_MAPS_API_KEY is set in your Supabase project settings and has the Directions API enabled." 
+        hint: "Make sure the GOOGLE_MAPS_API_KEY is set in your Supabase project settings and has all required APIs enabled: Maps JavaScript API, Places API, Geocoding API, and Directions API." 
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

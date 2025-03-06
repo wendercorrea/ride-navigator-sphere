@@ -34,6 +34,7 @@ export const useMapInitialization = ({
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService | null>(null);
   const [mapInitialized, setMapInitialized] = useState<boolean>(false);
+  const initAttemptedRef = useRef(false);
 
   // Function to change map type
   const setMapType = useCallback((mapType: google.maps.MapTypeId) => {
@@ -44,9 +45,12 @@ export const useMapInitialization = ({
   }, [map]);
 
   useEffect(() => {
+    // Prevent multiple initialization attempts
+    if (initAttemptedRef.current || !mapContainerRef.current) return;
+    
+    initAttemptedRef.current = true;
+    
     async function initMap() {
-      if (!mapContainerRef.current) return;
-      
       try {
         setIsLoading(true);
         setError(null);
