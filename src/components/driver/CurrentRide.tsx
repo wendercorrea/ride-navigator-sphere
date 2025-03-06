@@ -28,7 +28,6 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
     isTracking,
   } = useLocationTracking(ride.id);
   
-  // Start location tracking when the component mounts
   useEffect(() => {
     startTracking();
     
@@ -122,7 +121,6 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
-              {/* Status de deslocamento do motorista para o passageiro */}
               {partnerLocation && (
                 <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
@@ -203,7 +201,6 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
                 </p>
               </div>
               
-              {/* Agora exibe informação sobre a rota ativa */}
               <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Navigation className="w-4 h-4 text-blue-600" />
@@ -252,14 +249,12 @@ export function CurrentRide({ ride, loading }: CurrentRideProps) {
     );
   }
 
-  // Fallback para outros estados (não deve acontecer, mas é bom ter)
   return (
     <PendingRide
       key={ride.id}
       ride={ride}
       onCancel={() => {}} 
       onConclude={() => {
-        // Determine qual função chamar com base no status atual
         if (ride.status === 'accepted') {
           handleStartRide();
         } else if (ride.status === 'in_progress') {
