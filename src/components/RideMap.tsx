@@ -10,6 +10,8 @@ import { MapStatus } from "./map/MapStatus";
 import { MapSearch } from "./map/MapSearch";
 import { SelectionMap } from "./map/SelectionMap";
 import { RideMapProps } from "./map/types";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function RideMap({ 
   ride, 
@@ -47,7 +49,8 @@ export function RideMap({
     error, 
     geocoder, 
     directionsService,
-    mapInitialized 
+    mapInitialized,
+    setMapType
   } = useMapInitialization({
     mapContainerRef: mapRef,
     center: centerLocation,
@@ -56,6 +59,20 @@ export function RideMap({
 
   return (
     <div className="relative w-full h-full">
+      {/* Map type selector */}
+      {mapInitialized && (
+        <div className="absolute top-4 left-4 z-10">
+          <Tabs defaultValue="roadmap" onValueChange={(value) => setMapType(value as google.maps.MapTypeId)}>
+            <TabsList className="bg-background/80 backdrop-blur-sm">
+              <TabsTrigger value="roadmap">Padrão</TabsTrigger>
+              <TabsTrigger value="satellite">Satélite</TabsTrigger>
+              <TabsTrigger value="hybrid">Híbrido</TabsTrigger>
+              <TabsTrigger value="terrain">Terreno</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+      
       <div ref={mapRef} className="w-full h-full" />
       
       {/* Show loading state */}

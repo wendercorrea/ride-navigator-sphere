@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -19,6 +19,7 @@ interface UseMapInitializationResult {
   geocoder: google.maps.Geocoder | null;
   directionsService: google.maps.DirectionsService | null;
   mapInitialized: boolean;
+  setMapType: (mapType: google.maps.MapTypeId) => void;
 }
 
 export const useMapInitialization = ({
@@ -33,6 +34,14 @@ export const useMapInitialization = ({
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService | null>(null);
   const [mapInitialized, setMapInitialized] = useState<boolean>(false);
+
+  // Function to change map type
+  const setMapType = useCallback((mapType: google.maps.MapTypeId) => {
+    if (map) {
+      map.setMapTypeId(mapType);
+      console.log(`Map type changed to: ${mapType}`);
+    }
+  }, [map]);
 
   useEffect(() => {
     async function initMap() {
@@ -70,6 +79,7 @@ export const useMapInitialization = ({
         const mapOptions: google.maps.MapOptions = {
           center,
           zoom: trackingMode ? 13 : zoom,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
           styles: [
             {
               featureType: "poi",
@@ -113,6 +123,7 @@ export const useMapInitialization = ({
     error,
     geocoder,
     directionsService,
-    mapInitialized
+    mapInitialized,
+    setMapType
   };
 };

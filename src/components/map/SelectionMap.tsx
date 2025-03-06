@@ -5,6 +5,8 @@ import { useMapInitialization } from "./useMapInitialization";
 import { MapSearch } from "./MapSearch";
 import { MapControls } from "./MapControls";
 import { createSearchLocationIcon } from "./mapUtils";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SelectionMapProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void;
@@ -23,7 +25,8 @@ export const SelectionMap = ({
     isLoading, 
     error, 
     geocoder,
-    mapInitialized 
+    mapInitialized,
+    setMapType
   } = useMapInitialization({
     mapContainerRef: mapRef,
     center: initialLocation || undefined
@@ -87,6 +90,20 @@ export const SelectionMap = ({
   
   return (
     <div className="relative w-full h-full">
+      {/* Map type selector */}
+      {mapInitialized && (
+        <div className="absolute top-4 left-4 z-20">
+          <Tabs defaultValue="roadmap" onValueChange={(value) => setMapType(value as google.maps.MapTypeId)}>
+            <TabsList className="bg-background/80 backdrop-blur-sm">
+              <TabsTrigger value="roadmap">Padrão</TabsTrigger>
+              <TabsTrigger value="satellite">Satélite</TabsTrigger>
+              <TabsTrigger value="hybrid">Híbrido</TabsTrigger>
+              <TabsTrigger value="terrain">Terreno</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+      
       <MapSearch 
         map={map} 
         selectionMode={true} 
