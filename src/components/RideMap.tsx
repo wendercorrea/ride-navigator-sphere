@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import type { Ride } from "@/types/database";
@@ -240,7 +241,10 @@ export function RideMap({
                   const bounds = new google.maps.LatLngBounds()
                     .extend(pickupLocation)
                     .extend(destinationLocation);
-                  mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
+                  
+                  // Fix: Use proper padding type
+                  const padding = { top: 50, right: 50, bottom: 50, left: 50 };
+                  mapInstanceRef.current.fitBounds(bounds, padding);
                 }
               }
             }
@@ -437,7 +441,9 @@ export function RideMap({
                 bounds.extend({lat: passengerLocation.latitude, lng: passengerLocation.longitude});
               }
               
-              map.fitBounds(bounds, { padding: 60 });
+              // Fix: Use proper padding type
+              const padding = { top: 60, right: 60, bottom: 60, left: 60 };
+              map.fitBounds(bounds, padding);
             }
           }
           
@@ -532,7 +538,9 @@ export function RideMap({
           .extend(position)
           .extend({lat: ride.destination_latitude, lng: ride.destination_longitude});
         
-        mapInstanceRef.current.fitBounds(bounds, { padding: 60 });
+        // Fix: Use proper padding type
+        const padding = { top: 60, right: 60, bottom: 60, left: 60 };
+        mapInstanceRef.current.fitBounds(bounds, padding);
       } else if (mapInstanceRef.current) {
         mapInstanceRef.current.panTo(position);
       }
