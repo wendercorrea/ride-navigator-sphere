@@ -1,4 +1,4 @@
-<lov-codelov-code>
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import type { Ride } from "@/types/database";
@@ -734,4 +734,3 @@ export function RideMap({
     </div>
   );
 }
-</lov-code>
