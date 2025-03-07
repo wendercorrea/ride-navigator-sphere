@@ -22,4 +22,5 @@ export interface RideMapProps {
   trackingMode?: boolean;
   showDriverToDestinationRoute?: boolean;
   showPassengerLocation?: boolean;
+  locationSelectionType?: "origin" | "destination";
 }

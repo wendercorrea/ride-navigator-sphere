@@ -23,7 +23,7 @@ export function RideMap({
   trackingMode = false,
   showDriverToDestinationRoute = false,
   showPassengerLocation = true,
-  locationSelectionType = "origin" // Add a new prop for selection type
+  locationSelectionType = "origin" // Default to origin selection mode
 }: RideMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   
