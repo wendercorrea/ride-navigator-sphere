@@ -150,6 +150,7 @@ export function PassengerHome({
                 selectionMode={true} 
                 onLocationSelect={handleLocationSelect}
                 initialLocation={selectingPickup ? pickupCoords : destinationCoords}
+                locationSelectionType={selectingPickup ? "origin" : "destination"}
               />
             </div>
             <div className="text-sm text-muted-foreground">

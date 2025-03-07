@@ -9,6 +9,7 @@ interface SelectionMapMarkerProps {
   initialLocation: MapLocation | null;
   currentMarker: google.maps.Marker | null;
   setCurrentMarker: (marker: google.maps.Marker | null) => void;
+  selectionMode?: "origin" | "destination";
 }
 
 export const SelectionMapMarker = ({
@@ -16,7 +17,8 @@ export const SelectionMapMarker = ({
   mapInitialized,
   initialLocation,
   currentMarker,
-  setCurrentMarker
+  setCurrentMarker,
+  selectionMode = "origin"
 }: SelectionMapMarkerProps) => {
   // Place initial marker if provided
   useEffect(() => {
@@ -29,7 +31,7 @@ export const SelectionMapMarker = ({
     const marker = new google.maps.Marker({
       position: initialLocation,
       map,
-      title: "Local selecionado",
+      title: selectionMode === "origin" ? "Local de origem" : "Local de destino",
       icon: createSearchLocationIcon(),
       animation: google.maps.Animation.DROP,
     });
@@ -39,7 +41,7 @@ export const SelectionMapMarker = ({
     return () => {
       if (marker) marker.setMap(null);
     };
-  }, [map, initialLocation, mapInitialized, currentMarker, setCurrentMarker]);
+  }, [map, initialLocation, mapInitialized, currentMarker, setCurrentMarker, selectionMode]);
 
   return null;
 };

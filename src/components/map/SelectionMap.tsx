@@ -11,11 +11,13 @@ import { SelectionMapMarker } from "./SelectionMapMarker";
 interface SelectionMapProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void;
   initialLocation?: MapLocation | null;
+  selectionMode?: "origin" | "destination"; // Added selection mode
 }
 
 export const SelectionMap = ({
   onLocationSelect,
-  initialLocation = null
+  initialLocation = null,
+  selectionMode = "origin" // Default to origin selection
 }: SelectionMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [currentMarker, setCurrentMarker] = useState<google.maps.Marker | null>(null);
@@ -44,7 +46,7 @@ export const SelectionMap = ({
       const marker = new google.maps.Marker({
         position,
         map,
-        title: "Local selecionado",
+        title: selectionMode === "origin" ? "Local de origem" : "Local de destino",
         icon: createSearchLocationIcon(),
         animation: google.maps.Animation.DROP,
       });
@@ -62,7 +64,7 @@ export const SelectionMap = ({
     return () => {
       google.maps.event.removeListener(clickListener);
     };
-  }, [map, geocoder, mapInitialized, currentMarker, onLocationSelect]);
+  }, [map, geocoder, mapInitialized, currentMarker, onLocationSelect, selectionMode]);
   
   // Handle place selection from search
   const handlePlaceSelected = (lat: number, lng: number, address: string) => {
@@ -75,7 +77,7 @@ export const SelectionMap = ({
       const marker = new google.maps.Marker({
         position,
         map,
-        title: "Local selecionado",
+        title: selectionMode === "origin" ? "Local de origem" : "Local de destino",
         icon: createSearchLocationIcon(),
         animation: google.maps.Animation.DROP,
       });
@@ -103,6 +105,7 @@ export const SelectionMap = ({
         initialLocation={initialLocation}
         currentMarker={currentMarker}
         setCurrentMarker={setCurrentMarker}
+        selectionMode={selectionMode}
       />
       
       <MapControls 
