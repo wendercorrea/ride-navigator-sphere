@@ -1,3 +1,4 @@
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, MapPin, Calendar, Clock, CheckCircle, XCircle, Car, Navigation, ArrowRight } from "lucide-react";
@@ -114,13 +115,30 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
     }
   };
 
-  const showPassengerLocation = isDriver && ride.status === 'pending';
+  // Show driver location to passenger during accepted/in_progress
+  // Show passenger location to driver during pending/accepted
+  const showPassengerLocation = isDriver && (ride.status === 'pending' || ride.status === 'accepted');
+  
+  // Show driver-to-destination route when in progress for both driver and passenger
   const showDriverToDestinationRoute = ride.status === 'in_progress';
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Corrida {ride.status === 'accepted' ? 'Aceita' : 'Solicitada'}</CardTitle>
+        <CardTitle>
+          {isDriver 
+            ? ride.status === 'accepted' 
+              ? 'Corrida Aceita' 
+              : ride.status === 'in_progress' 
+                ? 'Corrida em Andamento' 
+                : 'Corrida Solicitada'
+            : ride.status === 'accepted'
+              ? 'Motorista a Caminho'
+              : ride.status === 'in_progress'
+                ? 'Corrida em Andamento'
+                : 'Corrida Solicitada'
+          }
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -199,6 +217,20 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
                 </div>
               </div>
             )}
+            
+            {ride.status === 'in_progress' && !isDriver && (
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Navigation className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700">
+                    Navegação em tempo real
+                  </span>
+                </div>
+                <p className="text-xs text-blue-600">
+                  Acompanhe a rota até o destino
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               {isDriver && ride.status === 'pending' ? (
@@ -221,7 +253,7 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
                     )}
                   </Button>
                 </>
-              ) : !isDriver && (
+              ) : !isDriver && ride.status === 'pending' && (
                 <Button 
                   variant="destructive" 
                   onClick={onCancel} 
@@ -242,7 +274,7 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
                 </Button>
               )}
               
-              {(isDriver || ride.status === 'accepted') && (
+              {(isDriver || ride.status !== 'pending') && (
                 <Button 
                   variant="default"
                   onClick={onConclude} 
@@ -257,7 +289,14 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
                   ) : (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      {isDriver ? "Iniciar Corrida" : "Concluir Corrida"}
+                      {isDriver 
+                        ? ride.status === 'accepted' 
+                          ? "Iniciar Corrida" 
+                          : "Finalizar Corrida"
+                        : ride.status === 'in_progress'
+                          ? "Finalizar Corrida"
+                          : "Confirmar Embarque"
+                      }
                     </>
                   )}
                 </Button>
@@ -270,7 +309,7 @@ export function PendingRide({ ride, onCancel, onConclude, loading }: PendingRide
               driverLocation={!isDriver ? partnerLocation : currentLocation}
               passengerLocation={!isDriver ? currentLocation : partnerLocation}
               trackingMode={true}
-              showRoute={true}
+              showRoute={!showDriverToDestinationRoute}
               showDriverToDestinationRoute={showDriverToDestinationRoute}
               showPassengerLocation={showPassengerLocation}
             />

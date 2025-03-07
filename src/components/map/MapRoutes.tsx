@@ -1,14 +1,16 @@
 
+import React, { useEffect } from "react";
+import type { Ride } from "@/types/database";
+import { MapLocation, Location } from "./types";
 import { StaticRoute } from "./StaticRoute";
+import { locationToMapLocation } from "./mapUtils";
 import { DynamicRoute } from "./DynamicRoute";
-import { Ride } from "@/types/database";
-import { Location } from "./types";
 
 interface MapRoutesProps {
   map: google.maps.Map | null;
   directionsService: google.maps.DirectionsService | null;
   ride?: Ride;
-  driverLocation?: Location | null;
+  driverLocation: Location | null;
   showRoute?: boolean;
   showDriverToDestinationRoute?: boolean;
 }
@@ -21,22 +23,37 @@ export const MapRoutes = ({
   showRoute = true,
   showDriverToDestinationRoute = false
 }: MapRoutesProps) => {
+  // Show regular ride route from pickup to destination
+  const showStaticRoute = showRoute && ride && !showDriverToDestinationRoute;
+  
+  // Show dynamic route from driver location to destination (only when in progress)
+  const showDynamicDriverRoute = showDriverToDestinationRoute && ride && driverLocation && ride.status === 'in_progress';
+
   return (
     <>
-      <StaticRoute
-        map={map}
-        directionsService={directionsService}
-        ride={ride}
-        showRoute={showRoute}
-      />
+      {/* Static route from pickup to destination */}
+      {showStaticRoute && (
+        <StaticRoute
+          map={map}
+          directionsService={directionsService}
+          ride={ride}
+          showRoute={showRoute}
+        />
+      )}
       
-      <DynamicRoute
-        map={map}
-        directionsService={directionsService}
-        ride={ride}
-        driverLocation={driverLocation}
-        showDriverToDestinationRoute={showDriverToDestinationRoute}
-      />
+      {/* Dynamic route from driver location to destination */}
+      {showDynamicDriverRoute && (
+        <DynamicRoute
+          map={map}
+          directionsService={directionsService}
+          origin={locationToMapLocation(driverLocation as Location)}
+          destination={{
+            lat: ride.destination_latitude,
+            lng: ride.destination_longitude
+          }}
+          color="#4f46e5"
+        />
+      )}
     </>
   );
 };
