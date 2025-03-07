@@ -10,8 +10,7 @@ import { MapStatus } from "./map/MapStatus";
 import { MapSearch } from "./map/MapSearch";
 import { SelectionMap } from "./map/SelectionMap";
 import { RideMapProps } from "./map/types";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MapLoadingError } from "./map/MapLoadingError";
 
 export function RideMap({ 
   ride, 
@@ -49,8 +48,7 @@ export function RideMap({
     error, 
     geocoder, 
     directionsService,
-    mapInitialized,
-    setMapType
+    mapInitialized
   } = useMapInitialization({
     mapContainerRef: mapRef,
     center: centerLocation,
@@ -59,47 +57,9 @@ export function RideMap({
 
   return (
     <div className="relative w-full h-full">
-      {/* Map type selector */}
-      {mapInitialized && (
-        <div className="absolute top-4 left-4 z-10">
-          <Tabs defaultValue="roadmap" onValueChange={(value) => setMapType(value as google.maps.MapTypeId)}>
-            <TabsList className="bg-background/80 backdrop-blur-sm">
-              <TabsTrigger value="roadmap">Padrão</TabsTrigger>
-              <TabsTrigger value="satellite">Satélite</TabsTrigger>
-              <TabsTrigger value="hybrid">Híbrido</TabsTrigger>
-              <TabsTrigger value="terrain">Terreno</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      )}
-      
       <div ref={mapRef} className="w-full h-full" />
       
-      {/* Show loading state */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        </div>
-      )}
-      
-      {/* Show error state */}
-      {error && (
-        <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center p-4 text-center">
-          <div className="text-destructive mb-2">Erro ao carregar o mapa</div>
-          <div className="text-sm text-muted-foreground mb-4">
-            {error.includes("API key") 
-              ? "Chave de API do Google Maps inválida ou não configurada." 
-              : error}
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => window.location.reload()}
-          >
-            Tentar novamente
-          </Button>
-        </div>
-      )}
+      <MapLoadingError isLoading={isLoading} error={error} />
       
       {/* Add markers if map is initialized */}
       {mapInitialized && (

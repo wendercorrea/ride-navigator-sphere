@@ -5,7 +5,6 @@ import { useMapInitialization } from "./useMapInitialization";
 import { MapSearch } from "./MapSearch";
 import { MapControls } from "./MapControls";
 import { createSearchLocationIcon } from "./mapUtils";
-import { MapTypeSelector } from "./MapTypeSelector";
 import { MapLoadingError } from "./MapLoadingError";
 import { SelectionMapMarker } from "./SelectionMapMarker";
 
@@ -26,8 +25,7 @@ export const SelectionMap = ({
     isLoading, 
     error, 
     geocoder,
-    mapInitialized,
-    setMapType
+    mapInitialized
   } = useMapInitialization({
     mapContainerRef: mapRef,
     center: initialLocation || undefined
@@ -89,11 +87,6 @@ export const SelectionMap = ({
   
   return (
     <div className="relative w-full h-full">
-      {/* Map type selector */}
-      {mapInitialized && (
-        <MapTypeSelector onChange={setMapType} />
-      )}
-      
       <MapSearch 
         map={map} 
         selectionMode={true} 
