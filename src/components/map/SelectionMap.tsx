@@ -5,8 +5,9 @@ import { useMapInitialization } from "./useMapInitialization";
 import { MapSearch } from "./MapSearch";
 import { MapControls } from "./MapControls";
 import { createSearchLocationIcon } from "./mapUtils";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MapTypeSelector } from "./MapTypeSelector";
+import { MapLoadingError } from "./MapLoadingError";
+import { SelectionMapMarker } from "./SelectionMapMarker";
 
 interface SelectionMapProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void;
@@ -65,94 +66,51 @@ export const SelectionMap = ({
     };
   }, [map, geocoder, mapInitialized, currentMarker, onLocationSelect]);
   
-  // Place initial marker if provided
-  useEffect(() => {
-    if (!map || !initialLocation || !mapInitialized) return;
-    
+  // Handle place selection from search
+  const handlePlaceSelected = (lat: number, lng: number, address: string) => {
     if (currentMarker) {
       currentMarker.setMap(null);
     }
     
-    const marker = new google.maps.Marker({
-      position: initialLocation,
-      map,
-      title: "Local selecionado",
-      icon: createSearchLocationIcon(),
-      animation: google.maps.Animation.DROP,
-    });
-    
-    setCurrentMarker(marker);
-    
-    return () => {
-      if (marker) marker.setMap(null);
-    };
-  }, [map, initialLocation, mapInitialized]);
+    if (map) {
+      const position = { lat, lng };
+      const marker = new google.maps.Marker({
+        position,
+        map,
+        title: "Local selecionado",
+        icon: createSearchLocationIcon(),
+        animation: google.maps.Animation.DROP,
+      });
+      
+      setCurrentMarker(marker);
+      onLocationSelect(lat, lng, address);
+    }
+  };
   
   return (
     <div className="relative w-full h-full">
       {/* Map type selector */}
       {mapInitialized && (
-        <div className="absolute top-4 left-4 z-20">
-          <Tabs defaultValue="roadmap" onValueChange={(value) => setMapType(value as google.maps.MapTypeId)}>
-            <TabsList className="bg-background/80 backdrop-blur-sm">
-              <TabsTrigger value="roadmap">Padrão</TabsTrigger>
-              <TabsTrigger value="satellite">Satélite</TabsTrigger>
-              <TabsTrigger value="hybrid">Híbrido</TabsTrigger>
-              <TabsTrigger value="terrain">Terreno</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <MapTypeSelector onChange={setMapType} />
       )}
       
       <MapSearch 
         map={map} 
         selectionMode={true} 
-        onPlaceSelected={(lat, lng, address) => {
-          if (currentMarker) {
-            currentMarker.setMap(null);
-          }
-          
-          if (map) {
-            const position = { lat, lng };
-            const marker = new google.maps.Marker({
-              position,
-              map,
-              title: "Local selecionado",
-              icon: createSearchLocationIcon(),
-              animation: google.maps.Animation.DROP,
-            });
-            
-            setCurrentMarker(marker);
-            onLocationSelect(lat, lng, address);
-          }
-        }}
+        onPlaceSelected={handlePlaceSelected}
       />
       
       <div ref={mapRef} className="w-full h-full" />
       
-      {isLoading && (
-        <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        </div>
-      )}
+      <MapLoadingError isLoading={isLoading} error={error} />
       
-      {error && (
-        <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center p-4 text-center">
-          <div className="text-destructive mb-2">Erro ao carregar o mapa</div>
-          <div className="text-sm text-muted-foreground mb-4">
-            {error.includes("API key") 
-              ? "Chave de API do Google Maps inválida ou não configurada." 
-              : error}
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => window.location.reload()}
-          >
-            Tentar novamente
-          </Button>
-        </div>
-      )}
+      <SelectionMapMarker
+        map={map}
+        mapInitialized={mapInitialized}
+        initialLocation={initialLocation}
+        currentMarker={currentMarker}
+        setCurrentMarker={setCurrentMarker}
+      />
       
       <MapControls 
         map={map} 
