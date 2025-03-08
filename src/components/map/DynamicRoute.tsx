@@ -1,7 +1,6 @@
-
 import { useEffect, useRef, useCallback } from "react";
 import { Ride } from "@/types/database";
-import { Location } from "./types";
+import { Location, MapLocation } from "./types";
 import { locationToMapLocation, handleDirectionsError } from "./mapUtils";
 import { createDirectionsRenderer, createRoute } from "./routeUtils";
 
@@ -10,6 +9,9 @@ interface DynamicRouteProps {
   directionsService: google.maps.DirectionsService | null;
   ride?: Ride;
   driverLocation?: Location | null;
+  origin?: MapLocation;
+  destination?: MapLocation;
+  color?: string;
   showDriverToDestinationRoute?: boolean;
 }
 
@@ -18,6 +20,9 @@ export const DynamicRoute = ({
   directionsService,
   ride,
   driverLocation,
+  origin,
+  destination,
+  color = "#10b981",
   showDriverToDestinationRoute = false
 }: DynamicRouteProps) => {
   const dynamicRouteRendererRef = useRef<any>(null);
@@ -26,6 +31,45 @@ export const DynamicRoute = ({
 
   // Create dynamic route from driver to destination
   const updateDynamicRoute = useCallback(() => {
+    // If we have direct origin and destination props, use those
+    if (origin && destination && map && directionsService) {
+      console.log("Using direct origin/destination props for dynamic route:", origin, destination);
+      
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null);
+      }
+      
+      if (!dynamicRouteRendererRef.current) {
+        dynamicRouteRendererRef.current = createDirectionsRenderer(map, color);
+      }
+      
+      createRoute(
+        directionsService, 
+        origin, 
+        destination, 
+        dynamicRouteRendererRef.current, 
+        map, 
+        color
+      ).then(success => {
+        if (!success) {
+          console.warn("All fallback attempts failed, using direct polyline");
+          if (polylineRef.current) {
+            polylineRef.current.setMap(null);
+          }
+          
+          polylineRef.current = handleDirectionsError(
+            map, 
+            origin,
+            destination,
+            color
+          );
+        }
+      });
+      
+      return;
+    }
+    
+    // Otherwise use the legacy approach with ride and driverLocation
     if (!map || !directionsService || !ride || !driverLocation || hasAttemptedDynamicRouteRef.current) {
       console.log("Missing requirements for dynamic route update or already attempted");
       return;
@@ -47,7 +91,7 @@ export const DynamicRoute = ({
     }
     
     if (!dynamicRouteRendererRef.current) {
-      dynamicRouteRendererRef.current = createDirectionsRenderer(map, "#10b981");
+      dynamicRouteRendererRef.current = createDirectionsRenderer(map, color);
     }
     
     createRoute(
@@ -56,7 +100,7 @@ export const DynamicRoute = ({
       destinationPosition, 
       dynamicRouteRendererRef.current, 
       map, 
-      "#10b981"
+      color
     ).then(success => {
       if (!success) {
         // Use direct polyline as fallback
@@ -69,15 +113,20 @@ export const DynamicRoute = ({
           map, 
           driverPosition,
           destinationPosition,
-          "#10b981"
+          color
         );
       }
     });
-  }, [map, directionsService, ride, driverLocation]);
+  }, [map, directionsService, ride, driverLocation, origin, destination, color]);
 
-  // Update dynamic route when driver location changes
+  // Update dynamic route when properties change
   useEffect(() => {
-    if (showDriverToDestinationRoute && driverLocation && ride && map && directionsService) {
+    // Direct props approach
+    if (origin && destination) {
+      updateDynamicRoute();
+    }
+    // Legacy approach
+    else if (showDriverToDestinationRoute && driverLocation && ride && map && directionsService) {
       // Reset the flag when driver location or ride changes
       hasAttemptedDynamicRouteRef.current = false;
       updateDynamicRoute();
@@ -96,7 +145,9 @@ export const DynamicRoute = ({
     directionsService, 
     driverLocation, 
     ride, 
-    showDriverToDestinationRoute, 
+    showDriverToDestinationRoute,
+    origin,
+    destination,
     updateDynamicRoute
   ]);
 

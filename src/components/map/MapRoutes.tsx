@@ -46,11 +46,11 @@ export const MapRoutes = ({
         <DynamicRoute
           map={map}
           directionsService={directionsService}
-          origin={locationToMapLocation(driverLocation as Location)}
-          destination={{
+          origin={driverLocation ? locationToMapLocation(driverLocation) : undefined}
+          destination={ride ? {
             lat: ride.destination_latitude,
             lng: ride.destination_longitude
-          }}
+          } : undefined}
           color="#4f46e5"
         />
       )}
