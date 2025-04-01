@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Auth = () => {
   const { signIn, signUp, resetPassword, loading } = useAuth();
@@ -22,14 +24,24 @@ const Auth = () => {
   const [vehicleColor, setVehicleColor] = useState("");
   const [driverLicense, setDriverLicense] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
+    setNetworkError(false);
+    try {
+      await signIn(email, password);
+    } catch (error) {
+      if (error.message === 'Failed to fetch') {
+        setNetworkError(true);
+      }
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNetworkError(false);
+    
     if (isDriver && (!licensePlate || !vehicleModel || !vehicleColor || !driverLicense)) {
       toast({
         title: "Erro",
@@ -39,24 +51,31 @@ const Auth = () => {
       return;
     }
 
-    await signUp(
-      email, 
-      password, 
-      firstName, 
-      lastName, 
-      phone,
-      isDriver,
-      isDriver ? {
-        licensePlate,
-        vehicleModel,
-        vehicleColor,
-        driverLicense,
-      } : undefined
-    );
+    try {
+      await signUp(
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        phone,
+        isDriver,
+        isDriver ? {
+          licensePlate,
+          vehicleModel,
+          vehicleColor,
+          driverLicense,
+        } : undefined
+      );
+    } catch (error) {
+      if (error.message === 'Failed to fetch') {
+        setNetworkError(true);
+      }
+    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNetworkError(false);
     if (!email) {
       return toast({
         title: "Erro",
@@ -65,13 +84,29 @@ const Auth = () => {
       });
     }
     setIsResetting(true);
-    await resetPassword(email);
-    setIsResetting(false);
+    try {
+      await resetPassword(email);
+    } catch (error) {
+      if (error.message === 'Failed to fetch') {
+        setNetworkError(true);
+      }
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-secondary to-background p-4">
       <Card className="w-full max-w-md p-6 glass-effect">
+        {networkError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Erro de conexão. Verifique sua internet e tente novamente.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs defaultValue="signin">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="signin">Entrar</TabsTrigger>

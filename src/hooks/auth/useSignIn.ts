@@ -19,9 +19,18 @@ export function useSignIn() {
       navigate('/');
     } catch (error) {
       console.error('Error signing in:', error);
+      
+      // Better error handling
+      let errorMessage = 'Failed to sign in';
+      if (error.message === 'Failed to fetch') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

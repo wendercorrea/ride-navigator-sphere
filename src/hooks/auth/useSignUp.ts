@@ -65,9 +65,18 @@ export function useSignUp() {
       }
     } catch (error) {
       console.error('Error signing up:', error);
+      
+      // Better error handling
+      let errorMessage = 'Failed to create account';
+      if (error.message === 'Failed to fetch') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
