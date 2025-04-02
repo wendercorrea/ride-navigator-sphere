@@ -9,6 +9,7 @@ import { Database } from "@/integrations/supabase/types";
 import { RideFilters } from "@/components/ride/RideFilters";
 import { RideList } from "@/components/ride/RideList";
 import { LoadingState } from "@/components/ride/LoadingState";
+import { History } from "lucide-react";
 
 type RideStatus = Database["public"]["Enums"]["ride_status"];
 
@@ -28,12 +29,36 @@ export default function RideHistory() {
   const [rides, setRides] = useState<ExtendedRide[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<RideStatus | null>(null);
+  const [isDriver, setIsDriver] = useState(false);
+
+  useEffect(() => {
+    const checkIfDriver = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("drivers")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        setIsDriver(!!data);
+      } catch (error) {
+        console.error("Erro ao verificar status de motorista:", error);
+      }
+    };
+
+    checkIfDriver();
+  }, [user]);
 
   useEffect(() => {
     const fetchRideHistory = async () => {
       if (!user) return;
 
       try {
+        setLoading(true);
+        
         const query = supabase
           .from('rides')
           .select(`
@@ -48,18 +73,14 @@ export default function RideHistory() {
             )
           `);
 
-        const { data: driverCheck } = await supabase
-          .from('drivers')
-          .select('id')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (driverCheck) {
+        // Filtrar corridas baseado no tipo de usuário (motorista ou passageiro)
+        if (isDriver) {
           query.eq('driver_id', user.id);
         } else {
           query.eq('passenger_id', user.id);
         }
 
+        // Aplicar filtro de status se selecionado
         if (filter) {
           query.eq('status', filter);
         }
@@ -68,16 +89,16 @@ export default function RideHistory() {
 
         if (error) throw error;
 
-        // Convertemos explicitamente o tipo dos dados retornados
+        // Formatar os dados recebidos
         const formattedRides = (data as any[]).map(ride => ({
           ...ride,
           passenger: ride.passenger,
-          driver: ride.driver ? ride.driver[0] : null // Corrigindo o array para objeto único
+          driver: ride.driver
         }));
 
         setRides(formattedRides as ExtendedRide[]);
       } catch (error) {
-        console.error("Error fetching ride history:", error);
+        console.error("Erro ao carregar histórico de corridas:", error);
         toast({
           title: "Erro",
           description: "Não foi possível carregar o histórico de corridas",
@@ -89,7 +110,7 @@ export default function RideHistory() {
     };
 
     fetchRideHistory();
-  }, [user, filter]);
+  }, [user, filter, isDriver]);
 
   if (loading) {
     return <LoadingState />;
@@ -99,8 +120,15 @@ export default function RideHistory() {
     <div className="container mx-auto px-4 py-8">
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Histórico de Corridas</CardTitle>
-          <CardDescription>Seus deslocamentos recentes</CardDescription>
+          <div className="flex items-center gap-2">
+            <History className="h-6 w-6 text-primary" />
+            <CardTitle>Histórico de Corridas</CardTitle>
+          </div>
+          <CardDescription>
+            {isDriver 
+              ? "Corridas que você realizou como motorista" 
+              : "Suas solicitações de corridas"}
+          </CardDescription>
         </CardHeader>
         <RideFilters 
           currentFilter={filter} 
