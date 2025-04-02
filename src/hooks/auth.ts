@@ -5,7 +5,7 @@ import { useSignUp } from './auth/useSignUp';
 import { useSignOut } from './auth/useSignOut';
 import { usePasswordReset } from './auth/usePasswordReset';
 import { useProfileManagement } from './auth/useProfileManagement';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
 export function useAuth() {
   const { user, loading: authLoading } = useAuthState();
@@ -19,11 +19,16 @@ export function useAuth() {
     loading: profileLoading 
   } = useProfileManagement(user);
 
-  useEffect(() => {
+  // Use useCallback to prevent recreation of loadProfile function on each render
+  const stableLoadProfile = useCallback(() => {
     if (user) {
       loadProfile();
     }
   }, [user, loadProfile]);
+
+  useEffect(() => {
+    stableLoadProfile();
+  }, [stableLoadProfile]);
 
   return {
     user,

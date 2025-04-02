@@ -1,2 +1,2 @@
 
-export { useAuth } from './auth';
+export { useAuth } from './auth/index';
